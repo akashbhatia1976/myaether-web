@@ -7,29 +7,31 @@ export default function Dashboard() {
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // API Base URL
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
     useEffect(() => {
         async function fetchData() {
             try {
-                // Fetch user data
-                const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
-                    credentials: "include", // To send cookies if needed
-                });
+                // ✅ Get userId from localStorage or cookies
+                const storedUserId = localStorage.getItem("userId"); // Adjust if using cookies
+                if (!storedUserId) throw new Error("User ID not found, redirecting to login");
+
+                // ✅ Fetch user details using userId
+                const userResponse = await fetch(`${API_BASE_URL}/api/users/${storedUserId}`);
                 const user = await userResponse.json();
                 if (!userResponse.ok) throw new Error(user.error || "Failed to fetch user data");
-                
-                // Fetch reports
-                const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
+
+                // ✅ Fetch user reports
+                const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${storedUserId}`);
                 const reportsData = await reportsResponse.json();
                 if (!reportsResponse.ok) throw new Error(reportsData.error || "Failed to fetch reports");
 
-                // Set data
+                // ✅ Set state
                 setUserData(user);
                 setReports(reportsData);
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
+                router.push("/auth/login"); // Redirect to login if user session is missing
             } finally {
                 setLoading(false);
             }
