@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  },
+  reactStrictMode: true // ✅ Removed the unnecessary comma
 };
 
 export default nextConfig;
