@@ -95,7 +95,7 @@ export default function Dashboard() {
   };
 
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
-  if (loading) return <p>⏳ Loading dashboard...</p>;
+  if (loading) return <p>⏳ Loading dashboard 1...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
 
   return (
