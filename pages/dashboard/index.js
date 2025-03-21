@@ -7,30 +7,35 @@ export default function Dashboard() {
   const [token, setToken] = useState(null);
   const [userData, setUserData] = useState(null);
   const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  // ✅ Phase 1: Check for token only on client
+  // ✅ Phase 1: Check for token
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedToken = localStorage.getItem("token");
-      if (!storedToken) {
-        console.warn("Token not found. Redirecting to login.");
-        router.push("/auth/login");
-      } else {
+
+      if (storedToken) {
         setToken(storedToken);
+        setTokenChecked(true);
+      } else {
+        // Delay navigation slightly to avoid loop
+        setTimeout(() => {
+          router.push("/auth/login");
+        }, 500);
       }
-      setTokenChecked(true);
     }
   }, []);
 
-  // ✅ Phase 2: Fetch user data after token is confirmed
+  // ✅ Phase 2: Fetch user & reports
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
-    async function fetchData() {
+    const fetchData = async () => {
       try {
+        setLoading(true);
+
         const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -38,13 +43,12 @@ export default function Dashboard() {
         });
 
         if (!userResponse.ok) {
-          throw new Error("Failed to fetch user data");
+          throw new Error("Failed to fetch user");
         }
 
         const user = await userResponse.json();
         setUserData(user);
 
-        // ✅ Fetch reports
         const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
         if (!reportsResponse.ok) {
           throw new Error("Failed to fetch reports");
@@ -53,18 +57,18 @@ export default function Dashboard() {
         const reportsData = await reportsResponse.json();
         setReports(reportsData);
       } catch (err) {
-        console.error("Error fetching dashboard data:", err.message);
+        console.error("❌ Dashboard fetch error:", err.message);
         router.push("/auth/login");
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchData();
   }, [tokenChecked, token]);
 
-  // ✅ Phase 3: UI States
-  if (!tokenChecked) return <p>🔒 Checking authentication...</p>;
+  // ✅ Phase 3: Render
+  if (!tokenChecked) return <p>🔐 Checking authentication...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>❌ Error loading user data.</p>;
 
