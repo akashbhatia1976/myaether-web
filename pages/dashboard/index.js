@@ -11,9 +11,8 @@ export default function Dashboard() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-    console.log("🌐 API_BASE_URL:", API_BASE_URL);
+  console.log("🌐 API_BASE_URL:", API_BASE_URL);
 
-  // ✅ Check token only once client is ready
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedToken = localStorage.getItem("token");
@@ -21,20 +20,17 @@ export default function Dashboard() {
         setToken(storedToken);
         setTokenChecked(true);
       } else {
-        // No token — defer redirect outside render loop
         setTokenChecked(true);
       }
     }
   }, []);
 
-  // ✅ If no token after check, redirect to login
   useEffect(() => {
     if (tokenChecked && !token) {
       router.replace("/auth/login");
     }
   }, [tokenChecked, token]);
 
-  // ✅ Fetch user and reports after token check passes
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
@@ -53,18 +49,16 @@ export default function Dashboard() {
         const user = await userRes.json();
         setUserData(user);
 
-          // ✅ Fetch reports (after /me is successful)
-          const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
-          console.log("📦 Fetching reports for userId:", user.userId);
+        const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
+        console.log("📦 Fetching reports for userId:", user.userId);
 
-          if (!reportsResponse.ok) {
-            const errText = await reportsResponse.text();
-            throw new Error("Reports fetch failed: " + errText);
-          }
+        if (!reportsResponse.ok) {
+          const errText = await reportsResponse.text();
+          throw new Error("Reports fetch failed: " + errText);
+        }
 
-          const reportsData = await reportsResponse.json();
-          setReports(reportsData.reports || []); // ✅ default to empty array if missing
-
+        const reportsData = await reportsResponse.json();
+        setReports(reportsData.reports || []);
       } catch (err) {
         console.error("❌ Error:", err.message);
         router.replace("/auth/login");
@@ -76,7 +70,6 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
-  // ✅ UI Rendering
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
@@ -94,11 +87,12 @@ export default function Dashboard() {
         <ul>
           {reports.map((report) => (
             <li
-              key={report._id}
+              key={report._id || report.reportId}
               style={{ cursor: "pointer", color: "blue", textDecoration: "underline" }}
-              onClick={() => router.push(`/reports/${report._id}`)}
+              onClick={() => router.push(`/reports/${report.userId}/${report.reportId}`)}
             >
-              {report.fileName} - {new Date(report.uploadDate).toLocaleDateString()}
+              {report.reportId || report.fileName} -{" "}
+              {report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "Unknown Date"}
             </li>
           ))}
         </ul>
