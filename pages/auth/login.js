@@ -61,8 +61,9 @@ export default function LoginPage() {
       console.log("✅ Parsed Response:", data);
 
       // ✅ Ensure user data is stored **before** redirecting
-      localStorage.setItem("userId", data.userId);
-      localStorage.setItem("healthId", data.healthId);
+        localStorage.setItem("userId", data.userId);
+        localStorage.setItem("healthId", data.healthId);
+        localStorage.setItem("token", data.token); // ✅ Save JWT token
 
       console.log("✅ Login successful! Redirecting...");
       router.push("/dashboard");
