@@ -8,19 +8,12 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL?.startsWith("http")
-      ? process.env.NEXT_PUBLIC_API_URL
-      : `http://${process.env.NEXT_PUBLIC_API_URL}`;
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
-    if (!API_BASE_URL) {
-      console.warn("⚠️ API Base URL is missing. Set NEXT_PUBLIC_API_URL in .env.local");
-    }
-
     const token = localStorage.getItem("token");
     if (token) {
-      console.log("🔄 User already logged in, redirecting...");
+      console.log("🔄 Token found, redirecting to dashboard...");
       router.push("/dashboard");
     }
   }, []);
@@ -30,8 +23,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log("📌 Sending login request to:", `${API_BASE_URL}/api/users/login`);
-
       const response = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,35 +30,22 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server Error (${response.status}): ${errorText}`);
+        const errText = await response.text();
+        throw new Error(`Login failed: ${errText}`);
       }
 
-      const contentType = response.headers.get("content-type");
-      let data;
+      const data = await response.json();
 
-      if (contentType?.includes("application/json")) {
-        data = await response.json();
-      } else {
-        const raw = await response.text();
-        console.error("❌ Unexpected Response Format:", raw);
-        throw new Error("Unexpected response format. Contact support.");
-      }
-
-      if (!data.token || !data.userId || !data.healthId) {
-        throw new Error("Incomplete login data received. Contact support.");
-      }
-
-      // ✅ Save required items to localStorage
-      localStorage.setItem("token", data.token);
+      // ✅ Save user details and token
       localStorage.setItem("userId", data.userId);
       localStorage.setItem("healthId", data.healthId);
+      localStorage.setItem("token", data.token);
 
-      console.log("✅ Login successful. Redirecting...");
+      console.log("✅ Login successful, token saved.");
       router.push("/dashboard");
     } catch (err) {
-      console.error("❌ Login Error:", err);
-      setError(err.message || "An unexpected error occurred.");
+      console.error("❌ Login Error:", err.message);
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
@@ -96,6 +74,7 @@ export default function LoginPage() {
 
       <button
         onClick={handleLogin}
+        disabled={loading}
         style={{
           width: "100%",
           padding: 10,
@@ -103,7 +82,6 @@ export default function LoginPage() {
           color: "#fff",
           cursor: loading ? "not-allowed" : "pointer",
         }}
-        disabled={loading}
       >
         {loading ? "Logging in..." : "Login"}
       </button>
