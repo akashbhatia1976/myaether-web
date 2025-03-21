@@ -3,32 +3,36 @@ import { useRouter } from "next/router";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [tokenChecked, setTokenChecked] = useState(false);
   const [token, setToken] = useState(null);
+  const [tokenChecked, setTokenChecked] = useState(false);
   const [userData, setUserData] = useState(null);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  // ✅ Phase 1: Check for token
+  // ✅ Check token only once client is ready
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedToken = localStorage.getItem("token");
-
       if (storedToken) {
         setToken(storedToken);
         setTokenChecked(true);
       } else {
-        // Delay navigation slightly to avoid loop
-        setTimeout(() => {
-          router.push("/auth/login");
-        }, 500);
+        // No token — defer redirect outside render loop
+        setTokenChecked(true);
       }
     }
   }, []);
 
-  // ✅ Phase 2: Fetch user & reports
+  // ✅ If no token after check, redirect to login
+  useEffect(() => {
+    if (tokenChecked && !token) {
+      router.replace("/auth/login");
+    }
+  }, [tokenChecked, token]);
+
+  // ✅ Fetch user and reports after token check passes
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
@@ -36,29 +40,25 @@ export default function Dashboard() {
       try {
         setLoading(true);
 
-        const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
+        const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!userResponse.ok) {
-          throw new Error("Failed to fetch user");
-        }
+        if (!userRes.ok) throw new Error("User fetch failed");
 
-        const user = await userResponse.json();
+        const user = await userRes.json();
         setUserData(user);
 
-        const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
-        if (!reportsResponse.ok) {
-          throw new Error("Failed to fetch reports");
-        }
+        const reportsRes = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
+        if (!reportsRes.ok) throw new Error("Reports fetch failed");
 
-        const reportsData = await reportsResponse.json();
+        const reportsData = await reportsRes.json();
         setReports(reportsData);
       } catch (err) {
-        console.error("❌ Dashboard fetch error:", err.message);
-        router.push("/auth/login");
+        console.error("❌ Error:", err.message);
+        router.replace("/auth/login");
       } finally {
         setLoading(false);
       }
@@ -67,10 +67,10 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
-  // ✅ Phase 3: Render
-  if (!tokenChecked) return <p>🔐 Checking authentication...</p>;
+  // ✅ UI Rendering
+  if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
-  if (!userData) return <p>❌ Error loading user data.</p>;
+  if (!userData) return <p>⚠️ Unable to load user.</p>;
 
   return (
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
@@ -80,7 +80,7 @@ export default function Dashboard() {
 
       <h2>Your Reports</h2>
       {reports.length === 0 ? (
-        <p>No reports available.</p>
+        <p>No reports uploaded yet.</p>
       ) : (
         <ul>
           {reports.map((report) => (
