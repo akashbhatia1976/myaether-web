@@ -10,7 +10,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
   console.log("🌐 API_BASE_URL:", API_BASE_URL);
 
   useEffect(() => {
@@ -70,6 +69,25 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("healthId");
+    router.push("/auth/login");
+  };
+
+  const handleUpload = () => {
+    router.push("/upload");
+  };
+
+  const handleShare = () => {
+    router.push("/share");
+  };
+
+  const handleViewShared = () => {
+    router.push("/shared");
+  };
+
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
@@ -80,6 +98,13 @@ export default function Dashboard() {
       <p><strong>Health ID:</strong> {userData.healthId}</p>
       <p><strong>Total Reports:</strong> {reports.length}</p>
 
+      <div style={{ margin: "20px 0" }}>
+        <button onClick={handleUpload} style={buttonStyle}>Upload Report</button>
+        <button onClick={handleShare} style={buttonStyle}>Share Reports</button>
+        <button onClick={handleViewShared} style={buttonStyle}>View Shared Reports</button>
+        <button onClick={handleLogout} style={{ ...buttonStyle, backgroundColor: "#e53935" }}>Logout</button>
+      </div>
+
       <h2>Your Reports</h2>
       {reports.length === 0 ? (
         <p>No reports uploaded yet.</p>
@@ -87,12 +112,14 @@ export default function Dashboard() {
         <ul>
           {reports.map((report) => (
             <li
-              key={report._id || report.reportId}
-              style={{ cursor: "pointer", color: "blue", textDecoration: "underline" }}
-              onClick={() => router.push(`/reports/${report.userId}/${report.reportId}`)}
+              key={report._id}
+              style={{ cursor: "pointer", color: "blue", textDecoration: "underline", marginBottom: 6 }}
+              onClick={() => router.push(`/reports/${report._id}`)}
             >
-              {report.reportId || report.fileName} -{" "}
-              {report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "Unknown Date"}
+              {report.fileName}
+              {report.uploadDate && (
+                <> - {new Date(report.uploadDate).toLocaleDateString()}</>
+              )}
             </li>
           ))}
         </ul>
@@ -100,4 +127,14 @@ export default function Dashboard() {
     </div>
   );
 }
+
+const buttonStyle = {
+  padding: "10px 15px",
+  marginRight: "10px",
+  backgroundColor: "#6200ee",
+  color: "#fff",
+  border: "none",
+  borderRadius: "5px",
+  cursor: "pointer",
+};
 
