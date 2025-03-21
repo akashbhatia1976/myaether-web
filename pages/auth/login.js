@@ -14,7 +14,7 @@ export default function LoginPage() {
     const token = localStorage.getItem("token");
     if (token) {
       console.log("🔄 Token found, redirecting to dashboard...");
-      router.push("/dashboard");
+      router.push("/");
     }
   }, []);
 
