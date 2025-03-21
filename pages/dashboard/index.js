@@ -71,7 +71,8 @@ export default function Dashboard() {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     localStorage.removeItem("healthId");
-    router.push("/auth/login");
+      localStorage.clear();
+    router.replace("/auth/login");
   };
 
   const handleUpload = () => router.push("/upload");
