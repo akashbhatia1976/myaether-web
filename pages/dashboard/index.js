@@ -12,24 +12,25 @@ export default function Dashboard() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
   console.log("🌐 API_BASE_URL:", API_BASE_URL);
 
+  // ✅ Check token on load
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedToken = localStorage.getItem("token");
       if (storedToken) {
         setToken(storedToken);
-        setTokenChecked(true);
-      } else {
-        setTokenChecked(true);
       }
+      setTokenChecked(true);
     }
   }, []);
 
+  // ✅ Redirect if no token
   useEffect(() => {
     if (tokenChecked && !token) {
       router.replace("/auth/login");
     }
   }, [tokenChecked, token]);
 
+  // ✅ Fetch user and reports after login
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
@@ -44,19 +45,18 @@ export default function Dashboard() {
         });
 
         if (!userRes.ok) throw new Error("User fetch failed");
-
         const user = await userRes.json();
         setUserData(user);
 
-        const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
+        const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
         console.log("📦 Fetching reports for userId:", user.userId);
 
-        if (!reportsResponse.ok) {
-          const errText = await reportsResponse.text();
+        if (!reportsRes.ok) {
+          const errText = await reportsRes.text();
           throw new Error("Reports fetch failed: " + errText);
         }
 
-        const reportsData = await reportsResponse.json();
+        const reportsData = await reportsRes.json();
         setReports(reportsData.reports || []);
       } catch (err) {
         console.error("❌ Error:", err.message);
@@ -69,26 +69,18 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
-    const handleLogout = () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("healthId");
-      console.log("🔒 Logged out. Token cleared.");
-      router.replace("/auth/login");
-    };
-    
-  const handleUpload = () => {
-    router.push("/upload");
+  // ✅ Handlers
+  const handleLogout = () => {
+    localStorage.clear(); // ✅ Clear everything related to the user
+    console.log("🔒 Logged out. Token cleared.");
+    router.replace("/auth/login");
   };
 
-  const handleShare = () => {
-    router.push("/share");
-  };
+  const handleUpload = () => router.push("/upload");
+  const handleShare = () => router.push("/share");
+  const handleViewShared = () => router.push("/shared");
 
-  const handleViewShared = () => {
-    router.push("/shared");
-  };
-
+  // ✅ UI States
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
@@ -114,10 +106,15 @@ export default function Dashboard() {
           {reports.map((report) => (
             <li
               key={report._id}
-              style={{ cursor: "pointer", color: "blue", textDecoration: "underline", marginBottom: 6 }}
+              style={{
+                cursor: "pointer",
+                color: "blue",
+                textDecoration: "underline",
+                marginBottom: 6,
+              }}
               onClick={() => router.push(`/reports/${report._id}`)}
             >
-              {report.fileName}
+              {report.reportId || report.fileName}
               {report.uploadDate && (
                 <> - {new Date(report.uploadDate).toLocaleDateString()}</>
               )}
