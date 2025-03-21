@@ -10,17 +10,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-  console.log("🌐 API_BASE_URL:", API_BASE_URL);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedToken = localStorage.getItem("token");
-      if (storedToken) {
-        setToken(storedToken);
-        setTokenChecked(true);
-      } else {
-        setTokenChecked(true);
-      }
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      setTokenChecked(true);
+    } else {
+      setTokenChecked(true);
     }
   }, []);
 
@@ -38,25 +35,17 @@ export default function Dashboard() {
         setLoading(true);
 
         const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!userRes.ok) throw new Error("User fetch failed");
-
         const user = await userRes.json();
         setUserData(user);
 
-        const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
-        console.log("📦 Fetching reports for userId:", user.userId);
+        const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
+        if (!reportsRes.ok) throw new Error("Report fetch failed");
+        const reportsData = await reportsRes.json();
 
-        if (!reportsResponse.ok) {
-          const errText = await reportsResponse.text();
-          throw new Error("Reports fetch failed: " + errText);
-        }
-
-        const reportsData = await reportsResponse.json();
         setReports(reportsData.reports || []);
       } catch (err) {
         console.error("❌ Error:", err.message);
@@ -70,45 +59,31 @@ export default function Dashboard() {
   }, [tokenChecked, token]);
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("healthId");
-     window.location.href = "/auth/login"; // ✅ Force full page reload
-      console.log("🔒 Logged out. Token cleared.");
-      router.replace("/auth/login");
-    } catch (err) {
-      console.error("❌ Logout failed:", err.message);
-    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("healthId");
+    router.replace("/auth/login");
   };
 
-  const handleUpload = () => {
-    router.push("/upload");
-  };
-
-  const handleShare = () => {
-    router.push("/share");
-  };
-
-  const handleViewShared = () => {
-    router.push("/shared");
-  };
+  const handleUpload = () => router.push("/upload");
+  const handleShare = () => router.push("/share");
+  const handleViewShared = () => router.push("/shared");
 
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
-  if (loading) return <p>⏳ Loading dashboard 1...</p>;
+  if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+    <div style={styles.container}>
       <h1>Welcome, {userData.userId}</h1>
       <p><strong>Health ID:</strong> {userData.healthId}</p>
       <p><strong>Total Reports:</strong> {reports.length}</p>
 
-      <div style={{ margin: "20px 0" }}>
-        <button onClick={handleUpload} style={buttonStyle}>Upload Report</button>
-        <button onClick={handleShare} style={buttonStyle}>Share Reports</button>
-        <button onClick={handleViewShared} style={buttonStyle}>View Shared Reports</button>
-        <button onClick={handleLogout} style={{ ...buttonStyle, backgroundColor: "#e53935" }}>Logout</button>
+      <div style={styles.actions}>
+        <button onClick={handleUpload} style={styles.button}>Upload Report</button>
+        <button onClick={handleShare} style={styles.button}>Share Reports</button>
+        <button onClick={handleViewShared} style={styles.button}>View Shared Reports</button>
+        <button onClick={handleLogout} style={{ ...styles.button, backgroundColor: "#e53935" }}>Logout</button>
       </div>
 
       <h2>Your Reports</h2>
@@ -119,12 +94,15 @@ export default function Dashboard() {
           {reports.map((report) => (
             <li
               key={report._id}
-              style={{ cursor: "pointer", color: "blue", textDecoration: "underline", marginBottom: 6 }}
               onClick={() => router.push(`/reports/${report._id}`)}
+              style={styles.reportItem}
             >
-              {report.fileName}
-              {report.uploadDate && (
-                <> - {new Date(report.uploadDate).toLocaleDateString()}</>
+              <strong>{report.reportId || report._id}</strong>
+              {report.uploadDate && <> - {new Date(report.uploadDate).toLocaleDateString()}</>}
+              {report.extractedParameters && (
+                <div style={{ fontSize: 14 }}>
+                  {report.extractedParameters.length} parameters extracted
+                </div>
               )}
             </li>
           ))}
@@ -134,13 +112,28 @@ export default function Dashboard() {
   );
 }
 
-const buttonStyle = {
-  padding: "10px 15px",
-  marginRight: "10px",
-  backgroundColor: "#6200ee",
-  color: "#fff",
-  border: "none",
-  borderRadius: "5px",
-  cursor: "pointer",
+const styles = {
+  container: {
+    padding: "20px",
+    fontFamily: "Arial, sans-serif",
+  },
+  actions: {
+    margin: "20px 0",
+  },
+  button: {
+    padding: "10px 15px",
+    marginRight: "10px",
+    backgroundColor: "#6200ee",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+  reportItem: {
+    cursor: "pointer",
+    color: "blue",
+    textDecoration: "underline",
+    marginBottom: "10px",
+  },
 };
 
