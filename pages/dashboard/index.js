@@ -12,17 +12,22 @@ export default function Dashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                // ✅ Get userId from localStorage or cookies
-                const storedUserId = localStorage.getItem("userId"); // Adjust if using cookies
-                if (!storedUserId) throw new Error("User ID not found, redirecting to login");
+                // ✅ Get JWT token from localStorage
+                const token = localStorage.getItem("token");
+                if (!token) throw new Error("Token not found. Please log in.");
 
-                // ✅ Fetch user details using userId
-                const userResponse = await fetch(`${API_BASE_URL}/api/users/${storedUserId}`);
+                // ✅ Fetch user details using /api/users/me with Authorization header
+                const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
                 const user = await userResponse.json();
                 if (!userResponse.ok) throw new Error(user.error || "Failed to fetch user data");
 
-                // ✅ Fetch user reports
-                const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${storedUserId}`);
+                // ✅ Fetch user reports using extracted userId
+                const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
                 const reportsData = await reportsResponse.json();
                 if (!reportsResponse.ok) throw new Error(reportsData.error || "Failed to fetch reports");
 
@@ -30,8 +35,8 @@ export default function Dashboard() {
                 setUserData(user);
                 setReports(reportsData);
             } catch (error) {
-                console.error("Error fetching dashboard data:", error);
-                router.push("/auth/login"); // Redirect to login if user session is missing
+                console.error("Error fetching dashboard data:", error.message);
+                router.push("/auth/login"); // Redirect to login if token/session is missing
             } finally {
                 setLoading(false);
             }
