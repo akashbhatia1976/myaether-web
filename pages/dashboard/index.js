@@ -11,6 +11,8 @@ export default function Dashboard() {
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+    console.log("🌐 API_BASE_URL:", API_BASE_URL);
+
   // ✅ Check token only once client is ready
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -51,11 +53,18 @@ export default function Dashboard() {
         const user = await userRes.json();
         setUserData(user);
 
-        const reportsRes = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
-        if (!reportsRes.ok) throw new Error("Reports fetch failed");
+          // ✅ Fetch reports (after /me is successful)
+          const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
+          console.log("📦 Fetching reports for userId:", user.userId);
 
-        const reportsData = await reportsRes.json();
-        setReports(reportsData);
+          if (!reportsResponse.ok) {
+            const errText = await reportsResponse.text();
+            throw new Error("Reports fetch failed: " + errText);
+          }
+
+          const reportsData = await reportsResponse.json();
+          setReports(reportsData);
+
       } catch (err) {
         console.error("❌ Error:", err.message);
         router.replace("/auth/login");
