@@ -8,7 +8,6 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Ensure API URL is properly formatted
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL?.startsWith("http")
       ? process.env.NEXT_PUBLIC_API_URL
@@ -18,12 +17,9 @@ export default function LoginPage() {
     if (!API_BASE_URL) {
       console.warn("⚠️ API Base URL is missing. Set NEXT_PUBLIC_API_URL in .env.local");
     }
-  }, []);
 
-  // ✅ Redirect if already logged in
-  useEffect(() => {
-    const storedUserId = localStorage.getItem("userId");
-    if (storedUserId) {
+    const token = localStorage.getItem("token");
+    if (token) {
       console.log("🔄 User already logged in, redirecting...");
       router.push("/dashboard");
     }
@@ -42,30 +38,32 @@ export default function LoginPage() {
         body: JSON.stringify({ userId, password }),
       });
 
-      let data;
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Server Error (${response.status}): ${errorText}`);
       }
 
-      // ✅ Parse JSON only if response is JSON
       const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
+      let data;
+
+      if (contentType?.includes("application/json")) {
         data = await response.json();
       } else {
-        const textData = await response.text();
-        console.error("❌ Unexpected Response Format. Raw Data:", textData);
+        const raw = await response.text();
+        console.error("❌ Unexpected Response Format:", raw);
         throw new Error("Unexpected response format. Contact support.");
       }
 
-      console.log("✅ Parsed Response:", data);
+      if (!data.token || !data.userId || !data.healthId) {
+        throw new Error("Incomplete login data received. Contact support.");
+      }
 
-      // ✅ Ensure user data is stored **before** redirecting
-        localStorage.setItem("userId", data.userId);
-        localStorage.setItem("healthId", data.healthId);
-        localStorage.setItem("token", data.token); // ✅ Save JWT token
+      // ✅ Save required items to localStorage
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userId", data.userId);
+      localStorage.setItem("healthId", data.healthId);
 
-      console.log("✅ Login successful! Redirecting...");
+      console.log("✅ Login successful. Redirecting...");
       router.push("/dashboard");
     } catch (err) {
       console.error("❌ Login Error:", err);
