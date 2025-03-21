@@ -93,7 +93,7 @@ export default function Dashboard() {
             <li
               key={report._id}
               style={styles.reportItem}
-              onClick={() => router.push(`/reports/${report._id}`)}
+              onClick={() => router.push(`/reports/${userData.userId}/${report._id}`)}
             >
               <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
               <em>({report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "No date"})</em>
