@@ -10,39 +10,42 @@ export default function Dashboard() {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
     useEffect(() => {
-        async function fetchData() {
-            try {
-                // ✅ Get JWT token from localStorage
-                const token = localStorage.getItem("token");
-                if (!token) throw new Error("Token not found. Please log in.");
+        const fetchDashboardData = async () => {
+            const token = localStorage.getItem("token");
 
-                // ✅ Fetch user details using /api/users/me with Authorization header
-                const userResponse = await fetch(`${API_BASE_URL}/api/users/me`, {
+            if (!token) {
+                console.warn("No token found, redirecting to login...");
+                router.push("/auth/login");
+                return;
+            }
+
+            try {
+                const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
                 });
 
-                const user = await userResponse.json();
-                if (!userResponse.ok) throw new Error(user.error || "Failed to fetch user data");
+                if (!userRes.ok) {
+                    throw new Error("Invalid token or user not found");
+                }
 
-                // ✅ Fetch user reports using extracted userId
-                const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
-                const reportsData = await reportsResponse.json();
-                if (!reportsResponse.ok) throw new Error(reportsData.error || "Failed to fetch reports");
-
-                // ✅ Set state
+                const user = await userRes.json();
                 setUserData(user);
+
+                const reportsRes = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
+                const reportsData = await reportsRes.json();
+                if (!reportsRes.ok) throw new Error("Error fetching reports");
                 setReports(reportsData);
-            } catch (error) {
-                console.error("Error fetching dashboard data:", error.message);
-                router.push("/auth/login"); // Redirect to login if token/session is missing
+            } catch (err) {
+                console.error("❌ Error fetching dashboard data:", err.message);
+                router.push("/auth/login");
             } finally {
                 setLoading(false);
             }
-        }
+        };
 
-        fetchData();
+        fetchDashboardData();
     }, []);
 
     if (loading) return <p>Loading dashboard...</p>;
