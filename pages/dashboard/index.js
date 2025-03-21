@@ -6,15 +6,20 @@ export default function Dashboard() {
     const [userData, setUserData] = useState(null);
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [hasTriedFetch, setHasTriedFetch] = useState(false);
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
     useEffect(() => {
+        // Prevent running on server-side
+        if (typeof window === "undefined") return;
+
         const fetchDashboardData = async () => {
             const token = localStorage.getItem("token");
 
             if (!token) {
                 console.warn("No token found, redirecting to login...");
+                setLoading(false);
                 router.push("/auth/login");
                 return;
             }
@@ -42,11 +47,15 @@ export default function Dashboard() {
                 router.push("/auth/login");
             } finally {
                 setLoading(false);
+                setHasTriedFetch(true);
             }
         };
 
-        fetchDashboardData();
-    }, []);
+        // Only try fetch once
+        if (!hasTriedFetch) {
+            fetchDashboardData();
+        }
+    }, [hasTriedFetch]);
 
     if (loading) return <p>Loading dashboard...</p>;
     if (!userData) return <p>Error loading user data.</p>;
