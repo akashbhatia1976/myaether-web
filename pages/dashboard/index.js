@@ -63,7 +63,7 @@ export default function Dashboard() {
           }
 
           const reportsData = await reportsResponse.json();
-          setReports(reportsData);
+          setReports(reportsData.reports || []); // ✅ default to empty array if missing
 
       } catch (err) {
         console.error("❌ Error:", err.message);
