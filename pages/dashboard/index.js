@@ -15,10 +15,8 @@ export default function Dashboard() {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
       setToken(storedToken);
-      setTokenChecked(true);
-    } else {
-      setTokenChecked(true);
     }
+    setTokenChecked(true);
   }, []);
 
   useEffect(() => {
@@ -37,18 +35,18 @@ export default function Dashboard() {
         const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
         if (!userRes.ok) throw new Error("User fetch failed");
+
         const user = await userRes.json();
         setUserData(user);
 
         const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
-        if (!reportsRes.ok) throw new Error("Report fetch failed");
-        const reportsData = await reportsRes.json();
+        if (!reportsRes.ok) throw new Error("Reports fetch failed");
 
+        const reportsData = await reportsRes.json();
         setReports(reportsData.reports || []);
       } catch (err) {
-        console.error("❌ Error:", err.message);
+        console.error("❌ Error loading dashboard:", err.message);
         router.replace("/auth/login");
       } finally {
         setLoading(false);
@@ -79,7 +77,7 @@ export default function Dashboard() {
       <p><strong>Health ID:</strong> {userData.healthId}</p>
       <p><strong>Total Reports:</strong> {reports.length}</p>
 
-      <div style={styles.actions}>
+      <div style={styles.buttonContainer}>
         <button onClick={handleUpload} style={styles.button}>Upload Report</button>
         <button onClick={handleShare} style={styles.button}>Share Reports</button>
         <button onClick={handleViewShared} style={styles.button}>View Shared Reports</button>
@@ -90,19 +88,24 @@ export default function Dashboard() {
       {reports.length === 0 ? (
         <p>No reports uploaded yet.</p>
       ) : (
-        <ul>
+        <ul style={styles.reportList}>
           {reports.map((report) => (
             <li
               key={report._id}
-              onClick={() => router.push(`/reports/${report._id}`)}
               style={styles.reportItem}
+              onClick={() => router.push(`/reports/${report._id}`)}
             >
-              <strong>{report.reportId || report._id}</strong>
-              {report.uploadDate && <> - {new Date(report.uploadDate).toLocaleDateString()}</>}
-              {report.extractedParameters && (
-                <div style={{ fontSize: 14 }}>
-                  {report.extractedParameters.length} parameters extracted
-                </div>
+              <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
+              <em>({report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "No date"})</em>
+              <br />
+              {Array.isArray(report.extractedParameters) && report.extractedParameters.length > 0 && (
+                <ul style={styles.paramList}>
+                  {report.extractedParameters.slice(0, 3).map((param, idx) => (
+                    <li key={idx} style={styles.paramItem}>
+                      {param.parameter}: {param.value} {param.unit || ""}
+                    </li>
+                  ))}
+                </ul>
               )}
             </li>
           ))}
@@ -114,26 +117,41 @@ export default function Dashboard() {
 
 const styles = {
   container: {
+    maxWidth: "800px",
+    margin: "auto",
     padding: "20px",
     fontFamily: "Arial, sans-serif",
   },
-  actions: {
-    margin: "20px 0",
+  buttonContainer: {
+    marginTop: "20px",
+    marginBottom: "20px",
   },
   button: {
-    padding: "10px 15px",
     marginRight: "10px",
+    padding: "10px 15px",
     backgroundColor: "#6200ee",
     color: "#fff",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
   },
+  reportList: {
+    listStyleType: "none",
+    padding: 0,
+  },
   reportItem: {
-    cursor: "pointer",
-    color: "blue",
-    textDecoration: "underline",
+    background: "#f2f2f2",
+    padding: "10px",
     marginBottom: "10px",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+  paramList: {
+    paddingLeft: "15px",
+    marginTop: "5px",
+  },
+  paramItem: {
+    fontSize: "14px",
   },
 };
 
