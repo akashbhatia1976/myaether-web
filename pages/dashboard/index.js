@@ -69,13 +69,14 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("healthId");
-    router.push("/auth/login");
-  };
-
+    const handleLogout = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("healthId");
+      console.log("🔒 Logged out. Token cleared.");
+      router.replace("/auth/login");
+    };
+    
   const handleUpload = () => {
     router.push("/upload");
   };
