@@ -44,22 +44,20 @@ export default function Dashboard() {
         });
 
         if (!userRes.ok) throw new Error("User fetch failed");
-
         const user = await userRes.json();
         setUserData(user);
 
-        const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
-        console.log("📦 Fetching reports for userId:", user.userId);
-
-        if (!reportsResponse.ok) {
-          const errText = await reportsResponse.text();
+        // Fetch user's reports
+        const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
+        if (!reportsRes.ok) {
+          const errText = await reportsRes.text();
           throw new Error("Reports fetch failed: " + errText);
         }
 
-        const reportsData = await reportsResponse.json();
+        const reportsData = await reportsRes.json();
         setReports(reportsData.reports || []);
       } catch (err) {
-        console.error("❌ Error:", err.message);
+        console.error("❌ Dashboard Load Error:", err.message);
         router.replace("/auth/login");
       } finally {
         setLoading(false);
@@ -69,25 +67,16 @@ export default function Dashboard() {
     fetchData();
   }, [tokenChecked, token]);
 
-    const handleLogout = () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("healthId");
-      console.log("🔒 Logged out. Token cleared.");
-      router.replace("/auth/login");
-    };
-    
-  const handleUpload = () => {
-    router.push("/upload");
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("healthId");
+    router.push("/auth/login");
   };
 
-  const handleShare = () => {
-    router.push("/share");
-  };
-
-  const handleViewShared = () => {
-    router.push("/shared");
-  };
+  const handleUpload = () => router.push("/upload");
+  const handleShare = () => router.push("/share");
+  const handleViewShared = () => router.push("/shared");
 
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
@@ -97,30 +86,27 @@ export default function Dashboard() {
     <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
       <h1>Welcome, {userData.userId}</h1>
       <p><strong>Health ID:</strong> {userData.healthId}</p>
-      <p><strong>Total Reports:</strong> {reports.length}</p>
 
-      <div style={{ margin: "20px 0" }}>
-        <button onClick={handleUpload} style={buttonStyle}>Upload Report</button>
-        <button onClick={handleShare} style={buttonStyle}>Share Reports</button>
-        <button onClick={handleViewShared} style={buttonStyle}>View Shared Reports</button>
-        <button onClick={handleLogout} style={{ ...buttonStyle, backgroundColor: "#e53935" }}>Logout</button>
+      <div style={{ marginTop: "20px", marginBottom: "20px" }}>
+        <button onClick={handleUpload} style={btnStyle}>Upload Report</button>
+        <button onClick={handleShare} style={btnStyle}>Share Reports</button>
+        <button onClick={handleViewShared} style={btnStyle}>View Shared Reports</button>
+        <button onClick={handleLogout} style={{ ...btnStyle, backgroundColor: "#d32f2f" }}>Logout</button>
       </div>
 
-      <h2>Your Reports</h2>
+      <h2>Your Reports ({reports.length})</h2>
       {reports.length === 0 ? (
         <p>No reports uploaded yet.</p>
       ) : (
         <ul>
           {reports.map((report) => (
             <li
-              key={report._id}
-              style={{ cursor: "pointer", color: "blue", textDecoration: "underline", marginBottom: 6 }}
-              onClick={() => router.push(`/reports/${report._id}`)}
+              key={report._id || report.reportId}
+              style={{ cursor: "pointer", color: "blue", textDecoration: "underline", marginBottom: 8 }}
+              onClick={() => router.push(`/reports/${report.reportId || report._id}`)}
             >
-              {report.fileName}
-              {report.uploadDate && (
-                <> - {new Date(report.uploadDate).toLocaleDateString()}</>
-              )}
+              {report.fileName || "Unnamed Report"}{" "}
+              {report.uploadDate ? `- ${new Date(report.uploadDate).toLocaleDateString()}` : ""}
             </li>
           ))}
         </ul>
@@ -129,9 +115,9 @@ export default function Dashboard() {
   );
 }
 
-const buttonStyle = {
-  padding: "10px 15px",
+const btnStyle = {
   marginRight: "10px",
+  padding: "10px 15px",
   backgroundColor: "#6200ee",
   color: "#fff",
   border: "none",
