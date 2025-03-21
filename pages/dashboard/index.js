@@ -74,6 +74,7 @@ export default function Dashboard() {
       localStorage.removeItem("token");
       localStorage.removeItem("userId");
       localStorage.removeItem("healthId");
+     window.location.href = "/auth/login"; // ✅ Force full page reload
       console.log("🔒 Logged out. Token cleared.");
       router.replace("/auth/login");
     } catch (err) {
