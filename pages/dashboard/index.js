@@ -54,7 +54,7 @@ export default function Dashboard() {
         setUserData(user);
 
           // ✅ Fetch reports (after /me is successful)
-          const reportsResponse = await fetch(`${API_BASE_URL}/api/reports?userId=${user.userId}`);
+          const reportsResponse = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
           console.log("📦 Fetching reports for userId:", user.userId);
 
           if (!reportsResponse.ok) {
