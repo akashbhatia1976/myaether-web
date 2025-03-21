@@ -19,6 +19,8 @@ export default function LoginPage() {
   }, []);
 
   const handleLogin = async () => {
+    console.log("🚀 Login button clicked"); // ✅ Added debug log
+
     setError(null);
     setLoading(true);
 
