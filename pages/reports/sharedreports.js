@@ -100,10 +100,15 @@ export default function ShareReports() {
   return (
     <div style={styles.container}>
       <h2>📑 Shared Reports</h2>
+          
+          <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
+            ⬅️ Back to Dashboard
+          </button>
+
 
       <div style={styles.toggleContainer}>
-        <button onClick={() => setViewMode("shared")} style={viewMode === "shared" ? styles.activeToggle : styles.toggle}>Shared Reports</button>
-        <button onClick={() => setViewMode("received")} style={viewMode === "received" ? styles.activeToggle : styles.toggle}>Received Reports</button>
+        <button onClick={() => setViewMode("shared")} style={viewMode === "shared" ? styles.activeToggle : styles.toggle}>Shared by me</button>
+        <button onClick={() => setViewMode("received")} style={viewMode === "received" ? styles.activeToggle : styles.toggle}>Shared with me</button>
       </div>
 
       {isLoading ? (
@@ -159,4 +164,15 @@ const styles = {
     marginBottom: 10,
     cursor: "pointer",
   },
+    
+    backButton: {
+      marginBottom: 20,
+      padding: "8px 14px",
+      backgroundColor: "#eee",
+      border: "1px solid #ccc",
+      borderRadius: 5,
+      cursor: "pointer",
+      fontSize: 14,
+    },
+
 };
