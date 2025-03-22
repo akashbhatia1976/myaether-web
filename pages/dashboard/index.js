@@ -63,7 +63,7 @@ export default function Dashboard() {
 
   const handleUpload = () => router.push("/upload");
   const handleShare = () => router.push("/share");
-  const handleViewShared = () => router.push("/shared");
+  const handleViewShared = () => router.push("/reports/sharedreports");
 
   const getTopParameters = (extracted) => {
     if (!extracted || typeof extracted !== "object") return [];
