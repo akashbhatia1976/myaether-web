@@ -101,11 +101,6 @@ export default function ShareReports() {
     <div style={styles.container}>
       <h2>📑 Shared Reports</h2>
           
-          <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
-            ⬅️ Back to Dashboard
-          </button>
-
-
       <div style={styles.toggleContainer}>
         <button onClick={() => setViewMode("shared")} style={viewMode === "shared" ? styles.activeToggle : styles.toggle}>Shared by me</button>
         <button onClick={() => setViewMode("received")} style={viewMode === "received" ? styles.activeToggle : styles.toggle}>Shared with me</button>
@@ -120,6 +115,11 @@ export default function ShareReports() {
           {(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}
         </ul>
       )}
+          
+          <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
+            ⬅️ Back to Dashboard
+          </button>
+          
     </div>
   );
 }
