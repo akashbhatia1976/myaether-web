@@ -13,7 +13,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
-    if (storedToken) setToken(storedToken);
+    if (storedToken) {
+      setToken(storedToken);
+    }
     setTokenChecked(true);
   }, []);
 
@@ -35,6 +37,7 @@ export default function Dashboard() {
         });
 
         if (!userRes.ok) throw new Error("User fetch failed");
+
         const user = await userRes.json();
         setUserData(user);
 
@@ -65,23 +68,19 @@ export default function Dashboard() {
   const handleShare = () => router.push("/share");
   const handleViewShared = () => router.push("/shared");
 
-  const getTopParameters = (extracted) => {
-    if (!extracted || typeof extracted !== "object") return [];
-
+  const extractTop3Params = (extractedParams) => {
+    if (!extractedParams) return [];
     const flatParams = [];
 
-    for (const category in extracted) {
-      const params = extracted[category];
-      if (typeof params === "object") {
-        for (const [name, details] of Object.entries(params)) {
-          flatParams.push({
-            name,
-            value: details?.Value || "N/A",
-            unit: details?.Unit || "",
-          });
-        }
-      }
-    }
+    Object.entries(extractedParams).forEach(([category, tests]) => {
+      Object.entries(tests).forEach(([param, details]) => {
+        flatParams.push({
+          parameter: param,
+          value: details?.Value || "N/A",
+          unit: details?.Unit || "",
+        });
+      });
+    });
 
     return flatParams.slice(0, 3);
   };
@@ -108,27 +107,26 @@ export default function Dashboard() {
         <p>No reports uploaded yet.</p>
       ) : (
         <ul style={styles.reportList}>
-          {reports.map((report) => (
-            <li
-              key={report._id}
-              style={styles.reportItem}
-              onClick={() => router.push(`/reports/reportdetails?reportId=${report.reportId}`)}
-            >
-              <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
-              <em>
-                ({report.date
-                  ? new Date(report.date).toLocaleDateString()
-                  : "No date"})
-              </em>
-              <ul style={styles.paramList}>
-                {getTopParameters(report.extractedParameters).map((param, i) => (
-                  <li key={i} style={styles.paramItem}>
-                    {param.name}: {param.value} {param.unit}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
+          {reports.map((report) => {
+            const top3 = extractTop3Params(report.extractedParameters);
+            return (
+              <li
+                key={report._id}
+                style={styles.reportItem}
+                onClick={() => router.push(`/reports/${userData.userId}/${report._id}`)}
+              >
+                <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
+                <em>({report.date ? new Date(report.date).toLocaleDateString() : "No date"})</em>
+                <ul style={styles.paramList}>
+                  {top3.map((param, idx) => (
+                    <li key={idx} style={styles.paramItem}>
+                      {param.parameter}: {param.value} {param.unit}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
