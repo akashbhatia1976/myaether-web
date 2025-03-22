@@ -68,23 +68,6 @@ export default function Dashboard() {
   const handleShare = () => router.push("/share");
   const handleViewShared = () => router.push("/shared");
 
-  const extractTop3Params = (extractedParams) => {
-    if (!extractedParams) return [];
-    const flatParams = [];
-
-    Object.entries(extractedParams).forEach(([category, tests]) => {
-      Object.entries(tests).forEach(([param, details]) => {
-        flatParams.push({
-          parameter: param,
-          value: details?.Value || "N/A",
-          unit: details?.Unit || "",
-        });
-      });
-    });
-
-    return flatParams.slice(0, 3);
-  };
-
   if (!tokenChecked) return <p>🧠 Checking login...</p>;
   if (loading) return <p>⏳ Loading dashboard...</p>;
   if (!userData) return <p>⚠️ Unable to load user.</p>;
@@ -92,14 +75,29 @@ export default function Dashboard() {
   return (
     <div style={styles.container}>
       <h1>Welcome, {userData.userId}</h1>
-      <p><strong>Health ID:</strong> {userData.healthId}</p>
-      <p><strong>Total Reports:</strong> {reports.length}</p>
+      <p>
+        <strong>Health ID:</strong> {userData.healthId}
+      </p>
+      <p>
+        <strong>Total Reports:</strong> {reports.length}
+      </p>
 
       <div style={styles.buttonContainer}>
-        <button onClick={handleUpload} style={styles.button}>Upload Report</button>
-        <button onClick={handleShare} style={styles.button}>Share Reports</button>
-        <button onClick={handleViewShared} style={styles.button}>View Shared Reports</button>
-        <button onClick={handleLogout} style={{ ...styles.button, backgroundColor: "#e53935" }}>Logout</button>
+        <button onClick={handleUpload} style={styles.button}>
+          Upload Report
+        </button>
+        <button onClick={handleShare} style={styles.button}>
+          Share Reports
+        </button>
+        <button onClick={handleViewShared} style={styles.button}>
+          View Shared Reports
+        </button>
+        <button
+          onClick={handleLogout}
+          style={{ ...styles.button, backgroundColor: "#e53935" }}
+        >
+          Logout
+        </button>
       </div>
 
       <h2>Your Reports</h2>
@@ -107,26 +105,31 @@ export default function Dashboard() {
         <p>No reports uploaded yet.</p>
       ) : (
         <ul style={styles.reportList}>
-          {reports.map((report) => {
-            const top3 = extractTop3Params(report.extractedParameters);
-            return (
-              <li
-                key={report._id}
-                style={styles.reportItem}
-                onClick={() => router.push(`/reports/${userData.userId}/${report._id}`)}
-              >
-                <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
-                <em>({report.date ? new Date(report.date).toLocaleDateString() : "No date"})</em>
-                <ul style={styles.paramList}>
-                  {top3.map((param, idx) => (
-                    <li key={idx} style={styles.paramItem}>
-                      {param.parameter}: {param.value} {param.unit}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            );
-          })}
+          {reports.map((report) => (
+            <li
+              key={report._id}
+              style={styles.reportItem}
+              onClick={() =>
+                router.push(`/reports/${userData.userId}/${report._id}`)
+              }
+            >
+              <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
+              <em>
+                ({report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "No date"})
+              </em>
+              <br />
+              {Array.isArray(report.extractedParameters) &&
+                report.extractedParameters.length > 0 && (
+                  <ul style={styles.paramList}>
+                    {report.extractedParameters.slice(0, 3).map((param, idx) => (
+                      <li key={idx} style={styles.paramItem}>
+                        {param.parameter}: {param.value} {param.unit || ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -172,4 +175,3 @@ const styles = {
     fontSize: "14px",
   },
 };
-
