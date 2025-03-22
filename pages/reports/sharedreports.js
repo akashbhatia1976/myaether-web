@@ -82,8 +82,8 @@ export default function ShareReports() {
               <p>
                 {viewMode === "shared"
                   ? `👤 Shared With: ${
-                      report.sharedWithUserId
-                        ? report.sharedWithUserId
+                      report.sharedWithId
+                        ? report.sharedWithId
                         : report.sharedWith
                         ? `${report.sharedWith} (invite sent)`
                         : "Unknown"
