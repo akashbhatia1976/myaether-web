@@ -18,7 +18,9 @@ export default function ReportDetails() {
       return;
     }
 
-    if (reportId) fetchReport(userId);
+    if (reportId) {
+      fetchReport(userId);
+    }
 
     async function fetchReport(userId) {
       try {
@@ -38,7 +40,7 @@ export default function ReportDetails() {
         setLoading(false);
       }
     }
-  }, [reportId]);
+  }, [reportId, router]);
 
   if (loading) return <p>Loading report...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
@@ -60,5 +62,61 @@ export default function ReportDetails() {
             <ul style={styles.paramList}>
               {Object.entries(params).map(([param, details]) => (
                 <li key={param} style={styles.paramItem}>
-                  {param}: <strong>{details.Value}</strong> {details.Unit && `(${details.Unit})`}{" 
+                  {param}: <strong>{details.Value}</strong>{" "}
+                  {details.Unit && `(${details.Unit})`}{" "}
+                  {details["Reference Range"] && ` - Ref: ${details["Reference Range"]}`}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      ) : (
+        <p>No extracted parameters found.</p>
+      )}
+
+      <button onClick={() => router.push("/dashboard")} style={styles.backButton}>
+        Back to Dashboard
+      </button>
+    </div>
+  );
+}
+
+const styles = {
+  container: {
+    maxWidth: "700px",
+    margin: "auto",
+    padding: "20px",
+    fontFamily: "Arial, sans-serif",
+  },
+  title: {
+    fontSize: "24px",
+    color: "#6200ee",
+  },
+  categoryBox: {
+    marginTop: "20px",
+    padding: "10px",
+    backgroundColor: "#f2f2f2",
+    borderRadius: "6px",
+  },
+  category: {
+    fontSize: "18px",
+    marginBottom: "8px",
+  },
+  paramList: {
+    listStyleType: "none",
+    paddingLeft: "10px",
+  },
+  paramItem: {
+    marginBottom: "4px",
+  },
+  backButton: {
+    marginTop: "20px",
+    padding: "10px 15px",
+    backgroundColor: "#6200ee",
+    color: "#fff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+};
 
