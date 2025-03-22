@@ -112,7 +112,13 @@ export default function Dashboard() {
             <li
               key={report._id}
               style={styles.reportItem}
-              onClick={() => router.push(`/reports/reportdetails?reportId=${report.reportId}`)}
+                                    onClick={() =>
+                                      router.push({
+                                        pathname: "/reports/reportdetails",
+                                        query: { reportId: report.reportId, userId: userData.userId }  // ← Pass both
+                                      })
+                                    }
+
             >
               <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
               <em>
