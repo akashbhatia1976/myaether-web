@@ -61,17 +61,34 @@ export default function ShareReports() {
     }
   };
 
-  const renderReportItem = (report) => (
-    <li
-      key={report._id}
-      style={styles.reportItem}
-      onClick={() => handleReportClick(report.reportId, viewMode === "shared" ? userId : report.ownerId)}
-    >
-      <p><strong>📄 Report ID:</strong> {report.reportId}</p>
-      <p>{viewMode === "shared" ? `👤 Shared With: ${report.sharedWith}` : `📥 Shared By: ${report.ownerId}`}</p>
-      <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
-    </li>
-  );
+    const renderReportItem = (report) => {
+      const recipient =
+        report.sharedWithUserId?.trim() && report.sharedWithUserId !== ""
+          ? report.sharedWithUserId
+          : `${report.sharedWith} (invite sent)`;
+
+      return (
+        <li
+          key={report._id}
+          style={styles.reportItem}
+          onClick={() =>
+            handleReportClick(
+              report.reportId,
+              viewMode === "shared" ? userId : report.ownerId
+            )
+          }
+        >
+          <p><strong>📄 Report ID:</strong> {report.reportId}</p>
+          <p>
+            {viewMode === "shared"
+              ? `👤 Shared With: ${recipient}`
+              : `📥 Shared By: ${report.ownerId}`}
+          </p>
+          <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
+        </li>
+      );
+    };
+
 
   return (
     <div style={styles.container}>
