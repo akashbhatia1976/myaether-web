@@ -166,13 +166,13 @@ const styles = {
   },
     
     backButton: {
-      marginBottom: 20,
-      padding: "8px 14px",
-      backgroundColor: "#eee",
-      border: "1px solid #ccc",
-      borderRadius: 5,
+      marginTop: "20px",
+      padding: "10px 15px",
+      backgroundColor: "#6200ee",
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
       cursor: "pointer",
-      fontSize: 14,
     },
 
 };
