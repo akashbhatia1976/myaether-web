@@ -35,6 +35,7 @@ export default function Dashboard() {
         const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!userRes.ok) throw new Error("User fetch failed");
 
         const user = await userRes.json();
@@ -74,14 +75,29 @@ export default function Dashboard() {
   return (
     <div style={styles.container}>
       <h1>Welcome, {userData.userId}</h1>
-      <p><strong>Health ID:</strong> {userData.healthId}</p>
-      <p><strong>Total Reports:</strong> {reports.length}</p>
+      <p>
+        <strong>Health ID:</strong> {userData.healthId}
+      </p>
+      <p>
+        <strong>Total Reports:</strong> {reports.length}
+      </p>
 
       <div style={styles.buttonContainer}>
-        <button onClick={handleUpload} style={styles.button}>Upload Report</button>
-        <button onClick={handleShare} style={styles.button}>Share Reports</button>
-        <button onClick={handleViewShared} style={styles.button}>View Shared Reports</button>
-        <button onClick={handleLogout} style={{ ...styles.button, backgroundColor: "#e53935" }}>Logout</button>
+        <button onClick={handleUpload} style={styles.button}>
+          Upload Report
+        </button>
+        <button onClick={handleShare} style={styles.button}>
+          Share Reports
+        </button>
+        <button onClick={handleViewShared} style={styles.button}>
+          View Shared Reports
+        </button>
+        <button
+          onClick={handleLogout}
+          style={{ ...styles.button, backgroundColor: "#e53935" }}
+        >
+          Logout
+        </button>
       </div>
 
       <h2>Your Reports</h2>
@@ -93,20 +109,25 @@ export default function Dashboard() {
             <li
               key={report._id}
               style={styles.reportItem}
-              onClick={() => router.push(`/reports/${userData.userId}/${report._id}`)}
+              onClick={() =>
+                router.push(`/reports/${userData.userId}/${report._id}`)
+              }
             >
               <strong>{report.reportId || "Unnamed Report"}</strong>{" "}
-              <em>({report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "No date"})</em>
+              <em>
+                ({report.uploadDate ? new Date(report.uploadDate).toLocaleDateString() : "No date"})
+              </em>
               <br />
-              {Array.isArray(report.extractedParameters) && report.extractedParameters.length > 0 && (
-                <ul style={styles.paramList}>
-                  {report.extractedParameters.slice(0, 3).map((param, idx) => (
-                    <li key={idx} style={styles.paramItem}>
-                      {param.parameter}: {param.value} {param.unit || ""}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {Array.isArray(report.extractedParameters) &&
+                report.extractedParameters.length > 0 && (
+                  <ul style={styles.paramList}>
+                    {report.extractedParameters.slice(0, 3).map((param, idx) => (
+                      <li key={idx} style={styles.paramItem}>
+                        {param.parameter}: {param.value} {param.unit || ""}
+                      </li>
+                    ))}
+                  </ul>
+                )}
             </li>
           ))}
         </ul>
@@ -154,4 +175,3 @@ const styles = {
     fontSize: "14px",
   },
 };
-
