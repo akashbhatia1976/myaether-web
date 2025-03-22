@@ -79,11 +79,18 @@ export default function ShareReports() {
           }
         >
           <p><strong>📄 Report ID:</strong> {report.reportId}</p>
-          <p>
-            {viewMode === "shared"
-              ? `👤 Shared With: ${recipient}`
-              : `📥 Shared By: ${report.ownerId}`}
-          </p>
+              <p>
+                {viewMode === "shared"
+                  ? `👤 Shared With: ${
+                      report.sharedWithUserId
+                        ? report.sharedWithUserId
+                        : report.sharedWith
+                        ? `${report.sharedWith} (invite sent)`
+                        : "Unknown"
+                    }`
+                  : `📥 Shared By: ${report.ownerId}`}
+              </p>
+
           <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
         </li>
       );
