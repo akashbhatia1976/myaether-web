@@ -22,8 +22,16 @@ export default function ReportDetails() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
       const data = await res.json();
-      setReportDetails(data.report);
-      fetchAIAnalysis(userId, reportId);
+      if (res.ok && data.report) {
+        setReportDetails(data.report);
+        if (data.report.aiAnalysis) {
+          setAiAnalysis(data.report.aiAnalysis);
+        } else {
+          fetchAIAnalysis(userId, reportId);
+        }
+      } else {
+        console.warn("⚠️ Report fetch returned empty or failed.", data);
+      }
     } catch (err) {
       console.error("❌ Failed to load report:", err);
     } finally {
@@ -65,13 +73,15 @@ export default function ReportDetails() {
       <p><strong>Date:</strong> {new Date(reportDetails.date).toLocaleDateString()}</p>
 
       <h2>📊 Extracted Parameters</h2>
-      {renderParameters(reportDetails.extractedParameters)}
+      {reportDetails.extractedParameters
+        ? renderParameters(reportDetails.extractedParameters)
+        : <p>No extracted parameters found.</p>}
 
       <h2>🧠 AI Health Analysis</h2>
       {analyzing ? (
         <p>Analyzing report... 🤖</p>
       ) : (
-        <pre style={styles.analysisBox}>{aiAnalysis}</pre>
+        <pre style={styles.analysisBox}>{aiAnalysis || "No analysis available."}</pre>
       )}
     </div>
   );
