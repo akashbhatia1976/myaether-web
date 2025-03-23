@@ -23,32 +23,31 @@ export default function ReportDetails() {
     }
   }, [router.isReady, router.query]);
 
-    const fetchReportDetails = async (userId, reportId) => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
-        const data = await res.json();
+  const fetchReportDetails = async (userId, reportId) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+      const data = await res.json();
 
-        console.log("✅ Fetched:", data);
+      console.log("✅ Fetched:", data);
 
-        if (res.ok && data) {
-          setReportDetails(data);
+      if (res.ok && data) {
+        setReportDetails(data);
 
-          if (data.aiAnalysis) {
-            setAiAnalysis(data.aiAnalysis);
-          } else {
-            fetchAIAnalysis(userId, reportId);
-          }
+        if (data.aiAnalysis) {
+          setAiAnalysis(data.aiAnalysis);
         } else {
-          console.warn("⚠️ Report fetch returned empty or failed.", data);
+          fetchAIAnalysis(userId, reportId);
         }
-      } catch (err) {
-        console.error("❌ Failed to load report:", err);
-      } finally {
-        setLoading(false);
+      } else {
+        console.warn("⚠️ Report fetch returned empty or failed.", data);
       }
-    };
-
+    } catch (err) {
+      console.error("❌ Failed to load report:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAIAnalysis = async (userId, reportId) => {
     setAnalyzing(true);
@@ -73,11 +72,17 @@ export default function ReportDetails() {
     }
   };
 
+  const goBackToDashboard = () => {
+    router.push("/dashboard");
+  };
+
   if (loading) return <p>⏳ Loading report...</p>;
   if (!reportDetails) return <p>⚠️ Report not found.</p>;
 
   return (
     <div style={styles.container}>
+      <button onClick={goBackToDashboard} style={styles.backButton}>← Back to Dashboard</button>
+
       <h1>📝 Report Details</h1>
       <p><strong>Report ID:</strong> {reportDetails.reportId}</p>
       <p><strong>Date:</strong> {new Date(reportDetails.date).toLocaleDateString()}</p>
@@ -91,6 +96,10 @@ export default function ReportDetails() {
       ) : (
         <pre style={styles.analysisBox}>{aiAnalysis}</pre>
       )}
+
+      <button onClick={goBackToDashboard} style={{ ...styles.backButton, marginTop: "30px" }}>
+        ← Back to Dashboard
+      </button>
     </div>
   );
 }
@@ -127,6 +136,15 @@ const styles = {
     padding: "15px",
     borderRadius: "5px",
     border: "1px solid #ccc",
+  },
+  backButton: {
+    backgroundColor: "#0070f3",
+    color: "#fff",
+    border: "none",
+    padding: "10px 15px",
+    borderRadius: "5px",
+    cursor: "pointer",
+    marginBottom: "20px",
   },
 };
 
