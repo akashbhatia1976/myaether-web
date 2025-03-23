@@ -16,6 +16,12 @@ export default function ReportDetails() {
       fetchReportDetails();
     }
   }, [userId, reportId]);
+    
+    console.log("🔧 API_BASE_URL =", API_BASE_URL);
+    console.log("👤 userId =", userId);
+    console.log("📄 reportId =", reportId);
+    console.log(`📡 Fetching: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+
 
   const fetchReportDetails = async () => {
     setLoading(true);
