@@ -3,7 +3,6 @@ import { useRouter } from "next/router";
 
 export default function ReportDetails() {
   const router = useRouter();
-  const { userId, reportId } = router.query;
   const [reportDetails, setReportDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -12,40 +11,42 @@ export default function ReportDetails() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
+    if (!router.isReady) return;
+
+    const { userId, reportId } = router.query;
     if (userId && reportId) {
-      fetchReportDetails();
+      console.log("🔧 API_BASE_URL =", API_BASE_URL);
+      console.log("👤 userId =", userId);
+      console.log("📄 reportId =", reportId);
+      console.log(`📡 Fetching: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+      fetchReportDetails(userId, reportId);
     }
-  }, [userId, reportId]);
-    
-    console.log("🔧 API_BASE_URL =", API_BASE_URL);
-    console.log("👤 userId =", userId);
-    console.log("📄 reportId =", reportId);
-    console.log(`📡 Fetching: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+  }, [router.isReady, router.query]);
 
+  const fetchReportDetails = async (userId, reportId) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+      const data = await res.json();
 
-    const fetchReportDetails = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
-        const data = await res.json();
+      console.log("✅ Fetched:", data);
 
-        if (data && data.report) {
-          setReportDetails(data.report);
-          if (data.report.aiAnalysis) {
-            setAiAnalysis(data.report.aiAnalysis);
-          } else {
-            fetchAIAnalysis(userId, reportId);
-          }
+      if (data && data.report) {
+        setReportDetails(data.report);
+        if (data.report.aiAnalysis) {
+          setAiAnalysis(data.report.aiAnalysis);
         } else {
-          console.warn("⚠️ Report fetch returned empty or failed.", data);
+          fetchAIAnalysis(userId, reportId);
         }
-      } catch (err) {
-        console.error("❌ Failed to load report:", err);
-      } finally {
-        setLoading(false);
+      } else {
+        console.warn("⚠️ Report fetch returned empty or failed.", data);
       }
-    };
-
+    } catch (err) {
+      console.error("❌ Failed to load report:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAIAnalysis = async (userId, reportId) => {
     setAnalyzing(true);
@@ -71,7 +72,6 @@ export default function ReportDetails() {
   };
 
   if (loading) return <p>⏳ Loading report...</p>;
-
   if (!reportDetails) return <p>⚠️ Report not found.</p>;
 
   return (
@@ -81,15 +81,13 @@ export default function ReportDetails() {
       <p><strong>Date:</strong> {new Date(reportDetails.date).toLocaleDateString()}</p>
 
       <h2>📊 Extracted Parameters</h2>
-      {reportDetails.extractedParameters
-        ? renderParameters(reportDetails.extractedParameters)
-        : <p>No extracted parameters found.</p>}
+      {renderParameters(reportDetails.extractedParameters)}
 
       <h2>🧠 AI Health Analysis</h2>
       {analyzing ? (
         <p>Analyzing report... 🤖</p>
       ) : (
-        <pre style={styles.analysisBox}>{aiAnalysis || "No analysis available."}</pre>
+        <pre style={styles.analysisBox}>{aiAnalysis}</pre>
       )}
     </div>
   );
