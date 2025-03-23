@@ -63,7 +63,7 @@ export default function Dashboard() {
     router.replace("/auth/login");
   };
 
-  const handleUpload = () => router.push("/upload");
+  const handleUpload = () => router.push("/reports/upload");
   const handleShare = () => router.push("/share");
   const handleViewShared = () => router.push("/reports/sharedreports");
 
