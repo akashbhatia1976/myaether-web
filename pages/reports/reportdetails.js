@@ -36,8 +36,6 @@ export default function ReportDetails() {
 
         if (data.aiAnalysis) {
           setAiAnalysis(data.aiAnalysis);
-        } else {
-          fetchAIAnalysis(userId, reportId);
         }
       } else {
         console.warn("⚠️ Report fetch returned empty or failed.", data);
@@ -72,16 +70,14 @@ export default function ReportDetails() {
     }
   };
 
-  const goBackToDashboard = () => {
-    router.push("/dashboard");
-  };
-
   if (loading) return <p>⏳ Loading report...</p>;
   if (!reportDetails) return <p>⚠️ Report not found.</p>;
 
+  const { userId, reportId } = router.query;
+
   return (
     <div style={styles.container}>
-      <button onClick={goBackToDashboard} style={styles.backButton}>← Back to Dashboard</button>
+      <button onClick={() => router.push("/dashboard")} style={styles.backButton}>⬅️ Back to Dashboard</button>
 
       <h1>📝 Report Details</h1>
       <p><strong>Report ID:</strong> {reportDetails.reportId}</p>
@@ -90,6 +86,15 @@ export default function ReportDetails() {
       <h2>📊 Extracted Parameters</h2>
       {renderParameters(reportDetails.extractedParameters)}
 
+      {!aiAnalysis && !analyzing && (
+        <button
+          onClick={() => fetchAIAnalysis(userId, reportId)}
+          style={styles.analyzeButton}
+        >
+          🧠 Analyze with AI
+        </button>
+      )}
+
       <h2>🧠 AI Health Analysis</h2>
       {analyzing ? (
         <p>Analyzing report... 🤖</p>
@@ -97,9 +102,7 @@ export default function ReportDetails() {
         <pre style={styles.analysisBox}>{aiAnalysis}</pre>
       )}
 
-      <button onClick={goBackToDashboard} style={{ ...styles.backButton, marginTop: "30px" }}>
-        ← Back to Dashboard
-      </button>
+      <button onClick={() => router.push("/dashboard")} style={styles.backButton}>⬅️ Back to Dashboard</button>
     </div>
   );
 }
@@ -139,9 +142,18 @@ const styles = {
   },
   backButton: {
     backgroundColor: "#0070f3",
-    color: "#fff",
+    color: "white",
+    padding: "10px 20px",
     border: "none",
-    padding: "10px 15px",
+    borderRadius: "5px",
+    cursor: "pointer",
+    marginBottom: "20px",
+  },
+  analyzeButton: {
+    backgroundColor: "#28a745",
+    color: "white",
+    padding: "10px 20px",
+    border: "none",
     borderRadius: "5px",
     cursor: "pointer",
     marginBottom: "20px",
