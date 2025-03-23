@@ -23,30 +23,32 @@ export default function ReportDetails() {
     }
   }, [router.isReady, router.query]);
 
-  const fetchReportDetails = async (userId, reportId) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
-      const data = await res.json();
+    const fetchReportDetails = async (userId, reportId) => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+        const data = await res.json();
 
-      console.log("✅ Fetched:", data);
+        console.log("✅ Fetched:", data);
 
-      if (data && data.report) {
-        setReportDetails(data.report);
-        if (data.report.aiAnalysis) {
-          setAiAnalysis(data.report.aiAnalysis);
+        if (res.ok && data) {
+          setReportDetails(data);
+
+          if (data.aiAnalysis) {
+            setAiAnalysis(data.aiAnalysis);
+          } else {
+            fetchAIAnalysis(userId, reportId);
+          }
         } else {
-          fetchAIAnalysis(userId, reportId);
+          console.warn("⚠️ Report fetch returned empty or failed.", data);
         }
-      } else {
-        console.warn("⚠️ Report fetch returned empty or failed.", data);
+      } catch (err) {
+        console.error("❌ Failed to load report:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("❌ Failed to load report:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
 
   const fetchAIAnalysis = async (userId, reportId) => {
     setAnalyzing(true);
