@@ -23,27 +23,29 @@ export default function ReportDetails() {
     console.log(`📡 Fetching: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
 
 
-  const fetchReportDetails = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
-      const data = await res.json();
-      if (res.ok && data.report) {
-        setReportDetails(data.report);
-        if (data.report.aiAnalysis) {
-          setAiAnalysis(data.report.aiAnalysis);
+    const fetchReportDetails = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+        const data = await res.json();
+
+        if (data && data.report) {
+          setReportDetails(data.report);
+          if (data.report.aiAnalysis) {
+            setAiAnalysis(data.report.aiAnalysis);
+          } else {
+            fetchAIAnalysis(userId, reportId);
+          }
         } else {
-          fetchAIAnalysis(userId, reportId);
+          console.warn("⚠️ Report fetch returned empty or failed.", data);
         }
-      } else {
-        console.warn("⚠️ Report fetch returned empty or failed.", data);
+      } catch (err) {
+        console.error("❌ Failed to load report:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("❌ Failed to load report:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
 
   const fetchAIAnalysis = async (userId, reportId) => {
     setAnalyzing(true);
