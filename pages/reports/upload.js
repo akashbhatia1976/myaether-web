@@ -1,89 +1,87 @@
 // pages/reports/upload.js
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 
-export default function UploadReportPage() {
+export default function UploadReport() {
   const router = useRouter();
   const [userId, setUserId] = useState("");
   const [reportDate, setReportDate] = useState("");
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("userId");
+    if (!storedUserId) {
+      router.push("/auth/login");
+    } else {
+      setUserId(storedUserId);
+    }
+  }, []);
+
   const handleFileChange = (e) => {
-    const picked = e.target.files[0];
-    setFile(picked);
-    setMessage(picked ? `✅ File selected: ${picked.name}` : "");
+    setFile(e.target.files[0]);
+    setMessage("");
   };
 
   const handleUpload = async () => {
-    if (!userId || !reportDate || !file) {
-      alert("Please fill in all fields and select a file.");
+    if (!reportDate || !file) {
+      setMessage("Please enter report date and select a file.");
       return;
     }
 
-    setLoading(true);
-    setMessage("");
     try {
+      setIsLoading(true);
+      setMessage("");
+
       const formData = new FormData();
       formData.append("userId", userId);
       formData.append("reportDate", reportDate);
       formData.append("file", file);
+      formData.append("autoCreateUser", "true");
 
-      const res = await fetch(`${API_BASE_URL}/api/upload`, {
+      const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: "POST",
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (res.ok && data.reportId) {
-        setMessage("✅ Report uploaded successfully!");
-        setFile(null);
-        setReportDate("");
-        router.push(`/reports/reportdetails?reportId=${data.reportId}&userId=${userId}`);
-      } else {
-        throw new Error(data.message || "Upload failed.");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      setMessage(`❌ ${err.message}`);
+      if (!response.ok) throw new Error(data.error || "Upload failed");
+
+      setMessage("✅ Upload successful! Redirecting...");
+      router.push(`/reports/reportdetails?reportId=${data.reportId}&userId=${userId}`);
+    } catch (error) {
+      console.error("Upload error:", error);
+      setMessage(`❌ ${error.message}`);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.header}>Upload Report</h1>
+      <h1>📤 Upload Report</h1>
+      <p><strong>User ID:</strong> {userId}</p>
 
+      <label>Date of Report:</label>
       <input
-        style={styles.input}
-        type="text"
-        placeholder="Enter User ID"
-        value={userId}
-        onChange={(e) => setUserId(e.target.value)}
-      />
-
-      <input
-        style={styles.input}
-        type="text"
-        placeholder="Enter Report Date (YYYY-MM-DD)"
+        type="date"
         value={reportDate}
         onChange={(e) => setReportDate(e.target.value)}
+        style={styles.input}
       />
 
-      <input type="file" accept=".pdf,image/*" onChange={handleFileChange} style={{ marginBottom: 10 }} />
+      <label>Select File:</label>
+      <input type="file" accept=".pdf,image/*" onChange={handleFileChange} style={styles.input} />
 
-      <button style={styles.button} onClick={handleUpload} disabled={loading}>
-        {loading ? "Uploading..." : "Upload Report"}
+      <button onClick={handleUpload} disabled={isLoading} style={styles.button}>
+        {isLoading ? "Uploading..." : "Upload"}
       </button>
 
-      {message && (
-        <p style={{ color: message.includes("✅") ? "green" : "red", marginTop: 10 }}>{message}</p>
-      )}
+      {message && <p style={{ marginTop: 10 }}>{message}</p>}
     </div>
   );
 }
@@ -92,28 +90,23 @@ const styles = {
   container: {
     maxWidth: "600px",
     margin: "auto",
-    padding: "20px",
-    fontFamily: "Arial, sans-serif",
-    backgroundColor: "#f8f8f8",
-    borderRadius: "8px",
-  },
-  header: {
-    textAlign: "center",
-    color: "#6200ee",
+    padding: 20,
+    fontFamily: "Arial",
   },
   input: {
     width: "100%",
-    padding: "10px",
-    marginBottom: "10px",
+    marginBottom: 15,
+    padding: 10,
+    borderRadius: 4,
     border: "1px solid #ccc",
-    borderRadius: "5px",
   },
   button: {
-    backgroundColor: "#6200ee",
+    padding: 10,
+    backgroundColor: "#4361ee",
     color: "white",
-    padding: "10px 20px",
     border: "none",
-    borderRadius: "5px",
+    borderRadius: 5,
     cursor: "pointer",
   },
 };
+
