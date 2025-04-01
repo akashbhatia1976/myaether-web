@@ -5,7 +5,8 @@ console.log("🌐 BASE_URL:", BASE_URL);
 
 const TIMEOUT = 60000;
 
-const fetchWithTimeout = async (url, options = {}) => {
+// ✅ Utility: Fetch with timeout (good for external APIs or fallback usage)
+export const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
@@ -31,16 +32,17 @@ const fetchWithTimeout = async (url, options = {}) => {
   }
 };
 
-const getToken = () => localStorage.getItem("token");
+// ✅ Auth Helpers
+export const getToken = () => localStorage.getItem("token");
 
-const getAuthHeaders = () => {
+export const getAuthHeaders = () => {
   const token = getToken();
   return {
     Authorization: `Bearer ${token}`,
   };
 };
 
-const getAuthFetchOptions = (method = "GET", body = null) => {
+export const getAuthFetchOptions = (method = "GET", body = null) => {
   const headers = {
     ...getAuthHeaders(),
     "Content-Type": "application/json",
@@ -53,7 +55,7 @@ const getAuthFetchOptions = (method = "GET", body = null) => {
   };
 };
 
-// ✅ Web equivalent of getUserDetails
+// ✅ Core API Calls
 export const getUserDetails = async () => {
   return await fetchWithTimeout(`${BASE_URL}/users/me`, {
     method: "GET",
@@ -61,7 +63,6 @@ export const getUserDetails = async () => {
   });
 };
 
-// ✅ Web equivalent of getReports
 export const getReports = async (userId) => {
   return await fetchWithTimeout(`${BASE_URL}/reports/${encodeURIComponent(userId)}`, {
     method: "GET",
@@ -69,21 +70,20 @@ export const getReports = async (userId) => {
   });
 };
 
-export {
-  fetchWithTimeout,
-  getToken,
-  getAuthHeaders,
-  getAuthFetchOptions,
-  BASE_URL
-};
-
-export const uploadReport = async (userId, reportDate, file, autoCreateUser = false, reportName = "") => {
+// ✅ Upload Report (FormData with file)
+export const uploadReport = async (
+  userId,
+  reportDate,
+  file,
+  autoCreateUser = false,
+  reportName = ""
+) => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("userId", userId); // ✅ this is REQUIRED for backend
+  formData.append("userId", userId); // ✅ needed by backend
   formData.append("reportDate", reportDate.toISOString().split("T")[0]);
   formData.append("reportName", reportName);
-  formData.append("autoCreateUser", autoCreateUser.toString()); // 🔁 ensure it's a string
+  formData.append("autoCreateUser", autoCreateUser.toString()); // ✅ ensure string
 
   const token = getToken();
 
@@ -91,8 +91,7 @@ export const uploadReport = async (userId, reportDate, file, autoCreateUser = fa
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      // ❌ DO NOT manually set 'Content-Type' here for FormData
-      // fetch will auto-attach proper boundary
+      // ⚠️ Don't manually set Content-Type for FormData
     },
     body: formData,
   });
@@ -103,7 +102,7 @@ export const uploadReport = async (userId, reportDate, file, autoCreateUser = fa
       const error = await response.json();
       throw new Error(error.message || "Upload failed");
     } else {
-      const text = await response.text(); // fallback to text
+      const text = await response.text();
       console.error("❌ Non-JSON response:", text);
       throw new Error("Upload failed. Server returned unexpected response.");
     }
@@ -112,4 +111,11 @@ export const uploadReport = async (userId, reportDate, file, autoCreateUser = fa
   return await response.json();
 };
 
+// ✅ Exports for shared use
+export {
+  BASE_URL,
+  // fetchWithTimeout already exported above
+  getAuthHeaders,
+  getAuthFetchOptions,
+};
 
