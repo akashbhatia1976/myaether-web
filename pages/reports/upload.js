@@ -57,7 +57,7 @@ export default function UploadReportPage() {
       if (response?.reportId) {
         router.push({
           pathname: "/reports/reportdetails",
-          query: { userId, reportId: response.reportId },
+          query: { reportId: response.reportId },
         });
       } else {
         throw new Error(response?.message || "Upload failed");

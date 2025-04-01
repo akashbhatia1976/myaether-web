@@ -7,21 +7,43 @@ export default function ReportDetails() {
   const [loading, setLoading] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [userId, setUserId] = useState(null);
+
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  useEffect(() => {
-    if (!router.isReady) return;
+    useEffect(() => {
+      if (!router.isReady) return;
 
-    const { userId, reportId } = router.query;
-    if (userId && reportId) {
-      console.log("🔧 API_BASE_URL =", API_BASE_URL);
-      console.log("👤 userId =", userId);
-      console.log("📄 reportId =", reportId);
-      console.log(`📡 Fetching: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
-      fetchReportDetails(userId, reportId);
-    }
-  }, [router.isReady, router.query]);
+      const { reportId } = router.query;
+      if (!reportId) return;
+
+      const fetchUserAndReport = async () => {
+        try {
+          const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          });
+
+          if (!userRes.ok) throw new Error("Failed to fetch user");
+
+          const user = await userRes.json();
+          const userId = user.userId;
+
+          setUserId(userId);
+          console.log(`📡 Fetching report: ${API_BASE_URL}/api/reports/${userId}/${reportId}`);
+          fetchReportDetails(userId, reportId);
+        } catch (err) {
+          console.error("❌ Failed to fetch user from token:", err);
+          router.push("/auth/login");
+        }
+      };
+
+      fetchUserAndReport();
+    }, [router.isReady, router.query]);
+
 
   const fetchReportDetails = async (userId, reportId) => {
     setLoading(true);
@@ -47,33 +69,57 @@ export default function ReportDetails() {
     }
   };
 
-  const fetchAIAnalysis = async (userId, reportId) => {
-    setAnalyzing(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/ai-analysis/analyze-report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, reportId }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setAiAnalysis(data.analysis);
-      } else {
-        console.error("⚠️ AI Analysis failed:", data);
-        setAiAnalysis("⚠️ AI analysis could not be generated.");
+    const fetchAIAnalysis = async (reportId) => {
+      setAnalyzing(true);
+      try {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("Missing authentication token");
+        }
+
+        // Get userId from /api/users/me
+        const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!userRes.ok) throw new Error("Failed to fetch user");
+
+        const user = await userRes.json();
+        const userId = user.userId;
+
+        const res = await fetch(`${API_BASE_URL}/api/ai-analysis/analyze-report`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userId, reportId }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setAiAnalysis(data.analysis);
+        } else {
+          console.error("⚠️ AI Analysis failed:", data);
+          setAiAnalysis("⚠️ AI analysis could not be generated.");
+        }
+      } catch (err) {
+        console.error("❌ AI analysis error:", err);
+        setAiAnalysis("⚠️ Error fetching AI analysis.");
+      } finally {
+        setAnalyzing(false);
       }
-    } catch (err) {
-      console.error("❌ AI analysis error:", err);
-      setAiAnalysis("⚠️ Error fetching AI analysis.");
-    } finally {
-      setAnalyzing(false);
-    }
-  };
+    };
 
   if (loading) return <p>⏳ Loading report...</p>;
   if (!reportDetails) return <p>⚠️ Report not found.</p>;
 
-  const { userId, reportId } = router.query;
+    const { reportId } = router.query;
+
 
   return (
     <div style={styles.container}>
