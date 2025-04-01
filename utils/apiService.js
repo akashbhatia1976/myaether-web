@@ -6,7 +6,7 @@ console.log("🌐 BASE_URL:", BASE_URL);
 const TIMEOUT = 60000;
 
 // ✅ Utility: Fetch with timeout (good for external APIs or fallback usage)
-export const fetchWithTimeout = async (url, options = {}) => {
+const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
@@ -33,16 +33,16 @@ export const fetchWithTimeout = async (url, options = {}) => {
 };
 
 // ✅ Auth Helpers
-export const getToken = () => localStorage.getItem("token");
+const getToken = () => localStorage.getItem("token");
 
-export const getAuthHeaders = () => {
+const getAuthHeaders = () => {
   const token = getToken();
   return {
     Authorization: `Bearer ${token}`,
   };
 };
 
-export const getAuthFetchOptions = (method = "GET", body = null) => {
+const getAuthFetchOptions = (method = "GET", body = null) => {
   const headers = {
     ...getAuthHeaders(),
     "Content-Type": "application/json",
@@ -56,14 +56,14 @@ export const getAuthFetchOptions = (method = "GET", body = null) => {
 };
 
 // ✅ Core API Calls
-export const getUserDetails = async () => {
+const getUserDetails = async () => {
   return await fetchWithTimeout(`${BASE_URL}/users/me`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
 };
 
-export const getReports = async (userId) => {
+const getReports = async (userId) => {
   return await fetchWithTimeout(`${BASE_URL}/reports/${encodeURIComponent(userId)}`, {
     method: "GET",
     headers: getAuthHeaders(),
@@ -71,7 +71,7 @@ export const getReports = async (userId) => {
 };
 
 // ✅ Upload Report (FormData with file)
-export const uploadReport = async (
+const uploadReport = async (
   userId,
   reportDate,
   file,
@@ -111,11 +111,15 @@ export const uploadReport = async (
   return await response.json();
 };
 
-// ✅ Exports for shared use
+// ✅ Centralized Export
 export {
   BASE_URL,
-  // fetchWithTimeout already exported above
+  fetchWithTimeout,
+  getToken,
   getAuthHeaders,
   getAuthFetchOptions,
+  getUserDetails,
+  getReports,
+  uploadReport
 };
 

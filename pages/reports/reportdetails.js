@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { getUserDetails, getAuthHeaders, BASE_URL } from "@/utils/apiService";
+import { getUserDetails, getAuthHeaders, BASE_URL } from '../../utils/apiService';
 
 export default function ReportDetails() {
   const router = useRouter();
