@@ -87,13 +87,14 @@ export const uploadReport = async (userId, reportDate, file, autoCreateUser = fa
 
   const token = getToken();
 
-  const response = await fetch(`${BASE_URL}/upload/${userId}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
+    const response = await fetch(`${BASE_URL}/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
 
   if (!response.ok) {
     const error = await response.json();
