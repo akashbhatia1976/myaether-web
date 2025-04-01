@@ -40,7 +40,12 @@ export default function Dashboard() {
         const user = await userRes.json();
         setUserData(user);
 
-        const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`);
+          const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
         if (!reportsRes.ok) throw new Error("Reports fetch failed");
 
         const reportsData = await reportsRes.json();
