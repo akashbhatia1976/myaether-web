@@ -77,28 +77,36 @@ export {
   BASE_URL
 };
 
-// ✅ Upload Report
 export const uploadReport = async (userId, reportDate, file, autoCreateUser = false, reportName = "") => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("userId", userId); // ✅ this is REQUIRED for backend
   formData.append("reportDate", reportDate.toISOString().split("T")[0]);
   formData.append("reportName", reportName);
-  formData.append("autoCreateUser", autoCreateUser);
+  formData.append("autoCreateUser", autoCreateUser.toString()); // 🔁 ensure it's a string
 
   const token = getToken();
 
-    const response = await fetch(`${BASE_URL}/upload`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
+  const response = await fetch(`${BASE_URL}/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      // ❌ DO NOT manually set 'Content-Type' here for FormData
+      // fetch will auto-attach proper boundary
+    },
+    body: formData,
+  });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Upload failed");
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const error = await response.json();
+      throw new Error(error.message || "Upload failed");
+    } else {
+      const text = await response.text(); // fallback to text
+      console.error("❌ Non-JSON response:", text);
+      throw new Error("Upload failed. Server returned unexpected response.");
+    }
   }
 
   return await response.json();
