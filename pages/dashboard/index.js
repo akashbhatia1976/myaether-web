@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { getUserDetails, getReports } from "../../utils/apiService";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -28,35 +29,24 @@ export default function Dashboard() {
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+      const fetchData = async () => {
+        try {
+          setLoading(true);
 
-        const userRes = await fetch(`${API_BASE_URL}/api/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+          const user = await getUserDetails();
+          setUserData(user);
 
-        if (!userRes.ok) throw new Error("User fetch failed");
-        const user = await userRes.json();
-        setUserData(user);
+          const reportsData = await getReports(user.userId);
+          setReports(reportsData.reports || []);
+          
+        } catch (err) {
+          console.error("❌ Error loading dashboard:", err.message);
+          router.replace("/auth/login");
+        } finally {
+          setLoading(false);
+        }
+      };
 
-          const reportsRes = await fetch(`${API_BASE_URL}/api/reports/${user.userId}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-        if (!reportsRes.ok) throw new Error("Reports fetch failed");
-
-        const reportsData = await reportsRes.json();
-        setReports(reportsData.reports || []);
-      } catch (err) {
-        console.error("❌ Error loading dashboard:", err.message);
-        router.replace("/auth/login");
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchData();
   }, [tokenChecked, token]);
