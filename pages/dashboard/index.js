@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
+import styles from "../../styles/dashboard.module.css";
 import { getUserDetails, getReports } from "../../utils/apiService";
 
 export default function Dashboard() {
@@ -22,7 +24,7 @@ export default function Dashboard() {
     if (tokenChecked && !token) {
       router.replace("/auth/login");
     }
-  }, [tokenChecked, token]);
+  }, [tokenChecked, token, router]);
 
   useEffect(() => {
     if (!tokenChecked || !token) return;
@@ -46,7 +48,7 @@ export default function Dashboard() {
     };
 
     fetchData();
-  }, [tokenChecked, token]);
+  }, [tokenChecked, token, router]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -56,10 +58,12 @@ export default function Dashboard() {
   };
 
   const handleUpload = () => router.push("/reports/upload");
+  
   const handleShareAll = () => router.push({
     pathname: "/reports/managesharereports",
-    query: { userId: userData.userId },
+    query: { userId: userData?.userId },
   });
+  
   const handleViewShared = () => router.push("/reports/sharedreports");
 
   const getTopParameters = (extracted) => {
@@ -85,10 +89,13 @@ export default function Dashboard() {
     if (activeTab !== "all") return true;
     if (!searchTerm) return true;
     const reportId = (report.reportId || "").toLowerCase();
+    const reportName = (report.name || report.fileName || "").toLowerCase();
     const date = report.date ? new Date(report.date).toLocaleDateString() : "";
+    const searchLower = searchTerm.toLowerCase();
     return (
-      reportId.includes(searchTerm.toLowerCase()) ||
-      date.includes(searchTerm.toLowerCase())
+      reportId.includes(searchLower) ||
+      reportName.includes(searchLower) ||
+      date.includes(searchLower)
     );
   });
 
@@ -102,129 +109,130 @@ export default function Dashboard() {
     });
   };
 
-  if (!tokenChecked) return <p>Checking login...</p>;
-  if (loading) return <p>Loading dashboard...</p>;
-  if (!userData) return <p>⚠️ Unable to load user</p>;
+  if (!tokenChecked) return <div className={styles.loading}>Checking login...</div>;
+  if (loading) return <div className={styles.loading}>Loading dashboard...</div>;
+  if (!userData) return <div className={styles.error}>⚠️ Unable to load user</div>;
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <div style={styles.headerContent}>
-          <div style={styles.userInfo}>
-            <h1 style={styles.username}>Hi, {userData.userId}</h1>
-            <p style={styles.healthId}>Health ID: {userData.healthId}</p>
+    <div className={styles.container}>
+      <Head>
+        <title>Dashboard | Aether Health</title>
+      </Head>
+      
+      <header className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.logoSection}>
+            <div className={styles.logo}>⚡</div>
+            <h1 className={styles.appName}>Aether Health</h1>
           </div>
-          <button onClick={handleLogout} style={styles.logoutButton}>Logout</button>
+          
+          <div className={styles.userSection}>
+            <div className={styles.userInfo}>
+              <h2 className={styles.username}>{userData.userId}</h2>
+              <p className={styles.healthId}>Health ID: {userData.healthId}</p>
+            </div>
+            <button onClick={handleLogout} className={styles.logoutButton}>Logout</button>
+          </div>
         </div>
       </header>
 
-      <div style={styles.actionsContainer}>
-        <button onClick={handleUpload} style={styles.actionButton}>📤 Upload Report</button>
-        <button onClick={handleShareAll} style={styles.actionButton}>🔗 Share All Reports</button>
-        <button onClick={handleViewShared} style={styles.actionButton}>👥 View Shared</button>
-      </div>
+      <main className={styles.mainContent}>
+        <section className={styles.welcomeSection}>
+          <h2 className={styles.welcomeTitle}>Welcome back, {userData.userId}!</h2>
+          <p className={styles.welcomeSubtitle}>Manage and analyze your health reports</p>
+        </section>
+        
+        <section className={styles.actionsContainer}>
+          <button onClick={handleUpload} className={styles.actionButton}>
+            <span className={styles.actionIcon}>📤</span>
+            <span className={styles.actionLabel}>Upload Report</span>
+          </button>
+          <button onClick={handleShareAll} className={styles.actionButton}>
+            <span className={styles.actionIcon}>🔗</span>
+            <span className={styles.actionLabel}>Share All Reports</span>
+          </button>
+          <button onClick={handleViewShared} className={styles.actionButton}>
+            <span className={styles.actionIcon}>👥</span>
+            <span className={styles.actionLabel}>View Shared Reports</span>
+          </button>
+        </section>
 
-      <div style={styles.reportsSection}>
-        <div style={styles.reportsHeader}>
-          <h2>Your Reports</h2>
-          <input
-            type="text"
-            placeholder="Search reports..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={styles.searchInput}
-          />
-        </div>
-
-        {filteredReports.length === 0 ? (
-          <p>No reports found.</p>
-        ) : (
-          <div style={styles.reportList}>
-            {filteredReports.map((report) => (
-              <div
-                key={report._id}
-                style={styles.reportCard}
-              >
-                <h3>{report.name || report.fileName || "Unnamed Report"}</h3>
-                <p>{formatDate(report.date)}</p>
-                <ul>
-                  {getTopParameters(report.extractedParameters).map((param, i) => (
-                    <li key={i}>{param.name}: {param.value} {param.unit}</li>
-                  ))}
-                </ul>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
-                  <button
-                    onClick={() =>
-                      router.push({
-                        pathname: "/reports/reportdetails",
-                        query: {
-                          reportId: report.reportId || report._id,
-                          userId: userData.userId,
-                        },
-                      })
-                    }
-                    style={{ padding: "5px 10px", borderRadius: 5, background: "#eee", cursor: "pointer" }}
-                  >
-                    View Details
-                  </button>
-                  <button
-                    onClick={() =>
-                      router.push({
-                        pathname: "/reports/managesharereports",
-                        query: {
-                          reportId: report.reportId || report._id,
-                          userId: userData.userId,
-                        },
-                      })
-                    }
-                    style={{ padding: "5px 10px", borderRadius: 5, background: "#ddeeff", cursor: "pointer" }}
-                  >
-                    Share
-                  </button>
-                </div>
-              </div>
-            ))}
+        <section>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Your Reports</h3>
+            <input
+              type="text"
+              placeholder="Search reports..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
           </div>
-        )}
-      </div>
+
+          {filteredReports.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>📄</div>
+              <p>No reports found. Upload your first report to get started.</p>
+            </div>
+          ) : (
+            <div className={styles.reportList}>
+              {filteredReports.map((report) => (
+                <div key={report._id || report.reportId} className={styles.reportCard}>
+                  <h3 className={styles.reportTitle}>{report.name || report.fileName || "Unnamed Report"}</h3>
+                  <p className={styles.reportDate}>{formatDate(report.date)}</p>
+                  
+                  <ul className={styles.parameterList}>
+                    {getTopParameters(report.extractedParameters).map((param, i) => (
+                      <li key={i} className={styles.parameterItem}>
+                        <span className={styles.parameterName}>{param.name}</span>
+                        <span className={styles.parameterValue}>
+                          {param.value} {param.unit}
+                        </span>
+                      </li>
+                    ))}
+                    {getTopParameters(report.extractedParameters).length === 0 && (
+                      <li className={styles.parameterItem}>
+                        <span className={styles.parameterName}>No parameters extracted</span>
+                      </li>
+                    )}
+                  </ul>
+                  
+                  <div className={styles.reportActions}>
+                    <button
+                      onClick={() =>
+                        router.push({
+                          pathname: "/reports/reportdetails",
+                          query: {
+                            reportId: report.reportId || report._id,
+                            userId: userData.userId,
+                          },
+                        })
+                      }
+                      className={styles.viewButton}
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() =>
+                        router.push({
+                          pathname: "/reports/managesharereports",
+                          query: {
+                            reportId: report.reportId || report._id,
+                            userId: userData.userId,
+                          },
+                        })
+                      }
+                      className={styles.shareButton}
+                    >
+                      Share
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
-
-const styles = {
-  container: { padding: 20, fontFamily: "Arial, sans-serif" },
-  header: { backgroundColor: "#4361ee", color: "white", padding: 20, borderRadius: 10 },
-  headerContent: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  userInfo: {},
-  username: { margin: 0, fontSize: 24 },
-  healthId: { margin: 0, fontSize: 14 },
-  logoutButton: {
-    backgroundColor: "#fff",
-    color: "#4361ee",
-    border: "none",
-    padding: "8px 15px",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
-  actionsContainer: { display: "flex", gap: 15, margin: "20px 0" },
-  actionButton: {
-    flex: 1,
-    padding: 15,
-    border: "1px solid #ccc",
-    borderRadius: 10,
-    backgroundColor: "white",
-    cursor: "pointer",
-  },
-  reportsSection: { marginTop: 30 },
-  reportsHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  searchInput: { padding: 8, borderRadius: 4, border: "1px solid #ccc" },
-  reportList: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginTop: 20 },
-  reportCard: {
-    border: "1px solid #ddd",
-    borderRadius: 10,
-    padding: 15,
-    backgroundColor: "#f9f9f9",
-    transition: "0.2s ease",
-  },
-};
-
