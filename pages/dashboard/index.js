@@ -155,7 +155,7 @@ export default function Dashboard() {
                   })
                 }
               >
-                <h3>{report.name || "Unnamed Report"}</h3>
+                <h3>{report.name || report.fileName ||"Unnamed Report"}</h3>
                 <p>{formatDate(report.date)}</p>
                 <ul>
                   {getTopParameters(report.extractedParameters).map((param, i) => (
