@@ -14,34 +14,37 @@ export default function Dashboard() {
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
-    if (storedToken) setToken(storedToken);
-    setTokenChecked(true);
+    if (!storedToken) {
+      router.replace("/auth/login"); // 🚨 No token? Redirect now.
+    } else {
+      setToken(storedToken);
+      setTokenChecked(true);
+    }
   }, []);
 
-    useEffect(() => {
-      if (!tokenChecked || !token) return;
+  useEffect(() => {
+    if (!tokenChecked || !token) return;
 
-      const fetchData = async () => {
-        try {
-          setLoading(true);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const user = await getUserDetails();
+        setUserData(user);
 
-          const user = await getUserDetails();
-          setUserData(user);
+        const reportsData = await getReports(user.userId);
+        setReports(reportsData);
+        console.log("📦 Reports fetched:", reportsData);
+      } catch (err) {
+        console.error("❌ Error loading dashboard:", err.message);
+        router.replace("/auth/login");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-          const reportsData = await getReports(user.userId); // ✅ ADDED THIS LINE
-          setReports(reportsData);
-          console.log("📦 Reports fetched:", reportsData);
+    fetchData();
+  }, [tokenChecked, token]);
 
-        } catch (err) {
-          console.error("❌ Error loading dashboard:", err.message);
-          router.replace("/auth/login");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchData();
-    }, [tokenChecked, token]);
 
 
   const handleLogout = () => {
