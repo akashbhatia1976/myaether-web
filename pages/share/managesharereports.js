@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { shareAllReports, getUserDetails } from "../../utils/apiService";
+import {
+  shareAllReports,
+  getUserDetails,
+  getAuthHeaders,
+  BASE_URL
+} from "../../utils/apiService";
 
 export default function ManageShareReports() {
   const router = useRouter();
@@ -8,8 +13,20 @@ export default function ManageShareReports() {
   const [sharedWith, setSharedWith] = useState("");
   const [relationshipType, setRelationshipType] = useState("Friend");
   const [loading, setLoading] = useState(false);
+  const [tokenChecked, setTokenChecked] = useState(false);
+  const [token, setToken] = useState(null);
 
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+    }
+    setTokenChecked(true);
+  }, []);
+
+  useEffect(() => {
+    if (!tokenChecked || !token) return;
+
     const fetchUser = async () => {
       try {
         const user = await getUserDetails();
@@ -21,7 +38,7 @@ export default function ManageShareReports() {
     };
 
     fetchUser();
-  }, [router]);
+  }, [tokenChecked, token]);
 
   const handleShare = async () => {
     if (!sharedWith) return alert("Please enter a user ID, email, or phone number.");
@@ -35,10 +52,25 @@ export default function ManageShareReports() {
 
     try {
       setLoading(true);
-      await shareAllReports(payload);
-      alert("✅ Reports shared successfully!");
-      setSharedWith("");
-      setRelationshipType("Friend");
+      const response = await fetch(`${BASE_URL}/share/share-all`, {
+        method: "POST",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert("✅ Reports shared successfully!");
+        setSharedWith("");
+        setRelationshipType("Friend");
+        router.push("/dashboard");
+      } else {
+        console.error("❌ API error:", data);
+        alert(data?.error || "Failed to share reports. Please try again.");
+      }
     } catch (error) {
       console.error("❌ Share error:", error);
       alert("Failed to share reports. Please try again.");
@@ -47,6 +79,7 @@ export default function ManageShareReports() {
     }
   };
 
+  if (!tokenChecked) return <p>Checking authentication...</p>;
   if (!userData) return <p>Loading user...</p>;
 
   return (
@@ -132,3 +165,4 @@ const styles = {
     cursor: "pointer",
   },
 };
+
