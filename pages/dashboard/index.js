@@ -56,7 +56,10 @@ export default function Dashboard() {
   };
 
   const handleUpload = () => router.push("/reports/upload");
-  const handleShare = () => router.push("/share/managesharereports");
+  const handleShareAll = () => router.push({
+    pathname: "/reports/managesharereports",
+    query: { userId: userData.userId },
+  });
   const handleViewShared = () => router.push("/reports/sharedreports");
 
   const getTopParameters = (extracted) => {
@@ -117,7 +120,7 @@ export default function Dashboard() {
 
       <div style={styles.actionsContainer}>
         <button onClick={handleUpload} style={styles.actionButton}>📤 Upload Report</button>
-        <button onClick={handleShare} style={styles.actionButton}>🔗 Share Reports</button>
+        <button onClick={handleShareAll} style={styles.actionButton}>🔗 Share All Reports</button>
         <button onClick={handleViewShared} style={styles.actionButton}>👥 View Shared</button>
       </div>
 
@@ -141,15 +144,6 @@ export default function Dashboard() {
               <div
                 key={report._id}
                 style={styles.reportCard}
-                onClick={() =>
-                  router.push({
-                    pathname: "/reports/reportdetails",
-                    query: {
-                      reportId: report.reportId || report._id,
-                      userId: userData.userId,
-                    },
-                  })
-                }
               >
                 <h3>{report.name || report.fileName || "Unnamed Report"}</h3>
                 <p>{formatDate(report.date)}</p>
@@ -158,6 +152,36 @@ export default function Dashboard() {
                     <li key={i}>{param.name}: {param.value} {param.unit}</li>
                   ))}
                 </ul>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+                  <button
+                    onClick={() =>
+                      router.push({
+                        pathname: "/reports/reportdetails",
+                        query: {
+                          reportId: report.reportId || report._id,
+                          userId: userData.userId,
+                        },
+                      })
+                    }
+                    style={{ padding: "5px 10px", borderRadius: 5, background: "#eee", cursor: "pointer" }}
+                  >
+                    View Details
+                  </button>
+                  <button
+                    onClick={() =>
+                      router.push({
+                        pathname: "/reports/managesharereports",
+                        query: {
+                          reportId: report.reportId || report._id,
+                          userId: userData.userId,
+                        },
+                      })
+                    }
+                    style={{ padding: "5px 10px", borderRadius: 5, background: "#ddeeff", cursor: "pointer" }}
+                  >
+                    Share
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -200,7 +224,6 @@ const styles = {
     borderRadius: 10,
     padding: 15,
     backgroundColor: "#f9f9f9",
-    cursor: "pointer",
     transition: "0.2s ease",
   },
 };

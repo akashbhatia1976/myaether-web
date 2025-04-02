@@ -138,6 +138,16 @@ export default function ReportDetails() {
           onClick={() => setActiveTab("ai")}
           style={activeTab === "ai" ? styles.activeTab : styles.inactiveTab}
         >🧠 AI Analysis</button>
+        <button
+          onClick={() =>
+            router.push(
+              `/reports/managesharereports?reportId=${reportDetails.reportId}&userId=${userId}`
+            )
+          }
+          style={styles.shareButton}
+        >
+          🔗 Share Report
+        </button>
       </div>
 
       {activeTab === "parameters" && renderParameters(groupedParams)}
@@ -214,6 +224,14 @@ const styles = {
     backgroundColor: "#f3f4f6",
     color: "#374151",
     border: "1px solid #d1d5db",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+  shareButton: {
+    padding: "10px 20px",
+    backgroundColor: "#f59e0b",
+    color: "white",
+    border: "none",
     borderRadius: "5px",
     cursor: "pointer",
   },
