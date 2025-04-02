@@ -308,3 +308,143 @@
 .backButton:hover {
   background-color: #E5E7EB;
 }
+
+/* Add or update these styles in styles/reportdetails.module.css */
+.aiAnalysisContainer {
+  background-color: #F0FDFA;
+  border: 1px solid #99F6E4;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(13, 148, 136, 0.1);
+}
+
+.aiHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #99F6E4;
+}
+
+.aiIcon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.aiTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0F766E;
+  margin: 0;
+}
+
+.aiSubtitle {
+  font-size: 14px;
+  color: #0F766E;
+  opacity: 0.8;
+  margin: 4px 0 0 0;
+}
+
+.analysisBox {
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #1F2937;
+  background-color: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #D1FAE5;
+  margin-bottom: 16px;
+}
+
+.analysisSection {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0F766E;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+}
+
+.sectionIcon {
+  margin-right: 8px;
+}
+
+.aiAnalysisDisclaimer {
+  font-size: 12px;
+  color: #64748B;
+  font-style: italic;
+  margin-top: 24px;
+  text-align: center;
+  padding: 8px;
+  background-color: #F8FAFC;
+  border-radius: 6px;
+}
+
+.analysisLoading {
+  text-align: center;
+  padding: 40px 0;
+  background-color: white;
+  border-radius: 8px;
+}
+
+.loadingIcon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.analyzeButton {
+  background-color: #0D9488;
+  color: white;
+  border: none;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin: 24px auto;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px rgba(13, 148, 136, 0.2);
+}
+
+.analyzeButton:hover {
+  background-color: #0F766E;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(13, 148, 136, 0.25);
+}
+
+.analyzeIcon {
+  margin-right: 12px;
+  font-size: 20px;
+}
+
+.highlightedInsight {
+  background-color: #ECFDF5;
+  border-left: 4px solid #10B981;
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.abnormalValue {
+  color: #EF4444;
+  font-weight: 500;
+}
+
+.normalValue {
+  color: #10B981;
+  font-weight: 500;
+}
