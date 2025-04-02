@@ -4,13 +4,14 @@ import { getUserDetails, getAuthHeaders, BASE_URL } from '../../utils/apiService
 
 export default function ReportDetails() {
   const router = useRouter();
+  const { reportId } = router.query;
+
   const [reportDetails, setReportDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [userId, setUserId] = useState(null);
-
-  const { reportId } = router.query;
+  const [activeTab, setActiveTab] = useState("parameters");
 
   useEffect(() => {
     if (!router.isReady || !reportId) return;
@@ -70,6 +71,7 @@ export default function ReportDetails() {
       const data = await res.json();
       if (res.ok) {
         setAiAnalysis(data.analysis);
+        setActiveTab("ai");
       } else {
         console.error("⚠️ AI Analysis failed:", data);
         setAiAnalysis("⚠️ AI analysis could not be generated.");
@@ -82,8 +84,40 @@ export default function ReportDetails() {
     }
   };
 
+  const groupParametersByCategory = (paramsArray) => {
+    const grouped = {};
+    paramsArray.forEach((param) => {
+      if (!grouped[param.category]) grouped[param.category] = {};
+      grouped[param.category][param.name] = {
+        Value: param.value,
+        Unit: param.unit,
+        "Reference Range": param.referenceRange,
+      };
+    });
+    return grouped;
+  };
+
+  const renderParameters = (params) => {
+    if (!params || Object.keys(params).length === 0) return <p>No parameters found.</p>;
+    return Object.entries(params).map(([category, values]) => (
+      <div key={category} style={styles.categoryBlock}>
+        <h3>{category}</h3>
+        <ul>
+          {Object.entries(values).map(([key, val]) => (
+            <li key={key}>
+              {key}: {val?.Value ?? 'N/A'} {val?.Unit || ''} (Range: {val?.["Reference Range"] || 'N/A'})
+            </li>
+          ))}
+        </ul>
+      </div>
+    ));
+  };
+
   if (loading) return <p>⏳ Loading report...</p>;
   if (!reportDetails) return <p>⚠️ Report not found.</p>;
+
+  const extractedParams = reportDetails.extractedParameters || [];
+  const groupedParams = groupParametersByCategory(extractedParams);
 
   return (
     <div style={styles.container}>
@@ -95,20 +129,29 @@ export default function ReportDetails() {
       <p><strong>Report ID:</strong> {reportDetails.reportId}</p>
       <p><strong>Date:</strong> {new Date(reportDetails.date).toLocaleDateString()}</p>
 
-      <h2>📊 Extracted Parameters</h2>
-      {renderParameters(reportDetails.extractedParameters)}
+      <div style={styles.tabContainer}>
+        <button
+          onClick={() => setActiveTab("parameters")}
+          style={activeTab === "parameters" ? styles.activeTab : styles.inactiveTab}
+        >📊 Parameters</button>
+        <button
+          onClick={() => setActiveTab("ai")}
+          style={activeTab === "ai" ? styles.activeTab : styles.inactiveTab}
+        >🧠 AI Analysis</button>
+      </div>
 
-      {!aiAnalysis && !analyzing && (
-        <button onClick={fetchAIAnalysis} style={styles.analyzeButton}>
-          🧠 Analyze with AI
-        </button>
-      )}
+      {activeTab === "parameters" && renderParameters(groupedParams)}
 
-      <h2>🧠 AI Health Analysis</h2>
-      {analyzing ? (
-        <p>Analyzing report... 🤖</p>
-      ) : (
-        <pre style={styles.analysisBox}>{aiAnalysis}</pre>
+      {activeTab === "ai" && (
+        analyzing ? (
+          <p>Analyzing report... 🤖</p>
+        ) : aiAnalysis ? (
+          <pre style={styles.analysisBox}>{aiAnalysis}</pre>
+        ) : (
+          <button onClick={fetchAIAnalysis} style={styles.analyzeButton}>
+            🧠 Generate AI Analysis
+          </button>
+        )
       )}
 
       <button onClick={() => router.push("/dashboard")} style={styles.backButton}>
@@ -117,22 +160,6 @@ export default function ReportDetails() {
     </div>
   );
 }
-
-// Helper function to render nested parameters
-const renderParameters = (params) => {
-  return Object.entries(params).map(([category, values]) => (
-    <div key={category} style={styles.categoryBlock}>
-      <h3>{category}</h3>
-      <ul>
-        {Object.entries(values).map(([key, val]) => (
-          <li key={key}>
-            {key}: {val.Value} {val.Unit} (Range: {val["Reference Range"]})
-          </li>
-        ))}
-      </ul>
-    </div>
-  ));
-};
 
 const styles = {
   container: {
@@ -168,6 +195,27 @@ const styles = {
     borderRadius: "5px",
     cursor: "pointer",
     marginBottom: "20px",
+  },
+  tabContainer: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+  activeTab: {
+    padding: "10px 20px",
+    backgroundColor: "#0D9488",
+    color: "white",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
+  },
+  inactiveTab: {
+    padding: "10px 20px",
+    backgroundColor: "#f3f4f6",
+    color: "#374151",
+    border: "1px solid #d1d5db",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
 };
 
