@@ -123,3 +123,59 @@ export {
   uploadReport
 };
 
+// ✅ Share Report function
+export const shareReport = async (payload) => {
+  return await fetchWithTimeout(`${BASE_URL}/share/share-report`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+};
+
+// ✅ Share All Reports function
+export const shareAllReports = async (payload) => {
+  return await fetchWithTimeout(`${BASE_URL}/share/share-all`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+};
+
+
+
+//✅ Get Shared By me Reports
+export const getSharedReportsByUser = async (userId) => {
+  return await fetchWithTimeout(`${BASE_URL}/share/shared-by/${encodeURIComponent(userId)}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+};
+
+//✅ Get  Reports Shared with me
+export const getReportsSharedWithUser = async (userId) => {
+  return await fetchWithTimeout(`${BASE_URL}/share/shared-with/${encodeURIComponent(userId)}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+};
+
+//✅ Revoke Shared Access
+export const revokeSharedReport = async (payload) => {
+  return await fetchWithTimeout(`${BASE_URL}/share/revoke`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+};
+
+
+
