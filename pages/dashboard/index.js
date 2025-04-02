@@ -18,34 +18,31 @@ export default function Dashboard() {
     setTokenChecked(true);
   }, []);
 
-  useEffect(() => {
-    if (tokenChecked && !token) {
-      router.replace("/auth/login");
-    }
-  }, [tokenChecked, token]);
+    useEffect(() => {
+      if (!tokenChecked || !token) return;
 
-  useEffect(() => {
-    if (!tokenChecked || !token) return;
+      const fetchData = async () => {
+        try {
+          setLoading(true);
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+          const user = await getUserDetails();
+          setUserData(user);
 
-        const user = await getUserDetails();
-        setUserData(user);
+          const reportsData = await getReports(user.userId); // ✅ ADDED THIS LINE
+          setReports(reportsData);
+          console.log("📦 Reports fetched:", reportsData);
 
-        const reportsData = await getReports(user.userId);
-        setReports(reportsData.reports || []);
-      } catch (err) {
-        console.error("❌ Error loading dashboard:", err.message);
-        router.replace("/auth/login");
-      } finally {
-        setLoading(false);
-      }
-    };
+        } catch (err) {
+          console.error("❌ Error loading dashboard:", err.message);
+          router.replace("/auth/login");
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    fetchData();
-  }, [tokenChecked, token]);
+      fetchData();
+    }, [tokenChecked, token]);
+
 
   const handleLogout = () => {
     localStorage.removeItem("token");
