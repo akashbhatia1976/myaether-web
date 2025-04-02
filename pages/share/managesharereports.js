@@ -40,44 +40,50 @@ export default function ManageShareReports() {
     fetchUser();
   }, [tokenChecked, token]);
 
-  const handleShare = async () => {
-    if (!sharedWith) return alert("Please enter a user ID, email, or phone number.");
+    const handleShare = async () => {
+      if (!sharedWith) return alert("Please enter a user ID, email, or phone number.");
 
-    const payload = {
-      ownerId: userData.userId,
-      sharedWith,
-      relationshipType,
-      permissionType: "view",
+      const payload = {
+        ownerId: userData.userId,
+        sharedWith,
+        relationshipType,
+        permissionType: "view",
+      };
+
+      const headers = {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      };
+
+      console.log("🧪 Headers being sent to /share/share-all:", headers);
+      console.log("📦 Payload being sent:", payload);
+
+      try {
+        setLoading(true);
+        const response = await fetch(`${BASE_URL}/share/share-all`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert("✅ Reports shared successfully!");
+          setSharedWith("");
+          setRelationshipType("Friend");
+          router.push("/dashboard");
+        } else {
+          console.error("❌ API error:", data);
+          alert(data?.error || "Failed to share reports. Please try again.");
+        }
+      } catch (error) {
+        console.error("❌ Share error:", error);
+        alert("Failed to share reports. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    try {
-      setLoading(true);
-      const response = await fetch(`${BASE_URL}/share/share-all`, {
-        method: "POST",
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        alert("✅ Reports shared successfully!");
-        setSharedWith("");
-        setRelationshipType("Friend");
-        router.push("/dashboard");
-      } else {
-        console.error("❌ API error:", data);
-        alert(data?.error || "Failed to share reports. Please try again.");
-      }
-    } catch (error) {
-      console.error("❌ Share error:", error);
-      alert("Failed to share reports. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!tokenChecked) return <p>Checking authentication...</p>;
   if (!userData) return <p>Loading user...</p>;
