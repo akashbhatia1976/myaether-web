@@ -151,7 +151,10 @@ export default function Dashboard() {
                 onClick={() =>
                   router.push({
                     pathname: "/reports/reportdetails",
-                    query: { reportId: report.reportId, userId: userData.userId }
+                      query: {
+                        reportId: report.reportId || report._id, // fallback for older reports
+                        userId: userData.userId,
+                      }
                   })
                 }
               >
