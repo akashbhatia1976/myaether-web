@@ -153,149 +153,137 @@ export default function ReportDetails() {
     ));
   };
 
-    const renderAIAnalysis = () => {
-      if (analyzing) {
+  const renderAIAnalysis = () => {
+    if (analyzing) {
+      return (
+        <div className={styles.analysisLoading}>
+          <div className={styles.loadingIcon}>🧠</div>
+          <p>Our AI is analyzing your medical report...</p>
+          <p>This may take a few moments</p>
+        </div>
+      );
+    }
+    
+    if (!aiAnalysis) {
+      return (
+        <div className={styles.noDataMessage}>
+          <button onClick={fetchAIAnalysis} className={styles.analyzeButton}>
+            <span className={styles.analyzeIcon}>🧠</span>
+            Generate AI Health Insights
+          </button>
+          <p>Let our AI analyze this report to give you personalized health insights.</p>
+        </div>
+      );
+    }
+    
+    // For a better presentation, try to parse the AI analysis into sections
+    const formatAndStructureAnalysis = (analysisText) => {
+      if (!analysisText) return null;
+      
+      // Handle case where analysis is just warning text
+      if (analysisText.startsWith('⚠️')) {
         return (
-          <div className={styles.analysisLoading}>
-            <div className={styles.loadingIcon}>🧠</div>
-            <p>Our AI is analyzing your medical report...</p>
-            <p>This may take a few moments</p>
+          <div className={styles.analysisBox}>
+            {analysisText}
           </div>
         );
       }
       
-      if (!aiAnalysis) {
-        return (
-          <div className={styles.noDataMessage}>
-            <button onClick={fetchAIAnalysis} className={styles.analyzeButton}>
-              <span className={styles.analyzeIcon}>🧠</span>
-              Generate AI Health Insights
-            </button>
-            <p>Let our AI analyze this report to give you personalized health insights.</p>
-          </div>
-        );
-      }
+      // Try to split by common section headers
+      // Simple check for common section patterns
+      const potentialSections = analysisText.split(/\n\s*(?=Summary:|Overview:|Assessment:|Findings:|Recommendations:|Abnormalities:|Concerns:|Interpretation:|Follow-up:)/gi);
       
-      // For a better presentation, try to parse the AI analysis into sections
-      const formatAndStructureAnalysis = (analysisText) => {
-        if (!analysisText) return null;
-        
-        // Handle case where analysis is just warning text
-        if (analysisText.startsWith('⚠️')) {
-          return (
-            <div className={styles.analysisBox}>
-              {analysisText}
-            </div>
-          );
-        }
-        
-        // Try to split by common section headers
-        const sections = [];
-        
-        // Simple check for common section patterns
-        const potentialSections = analysisText.split(/\n\s*(?=Summary:|Overview:|Assessment:|Findings:|Recommendations:|Abnormalities:|Concerns:|Interpretation:|Follow-up:)/gi);
-        
-        if (potentialSections.length > 1) {
-          return (
-            <>
-              {potentialSections.map((section, index) => {
-                // Extract heading if present
-                const headingMatch = section.match(/^(Summary|Overview|Assessment|Findings|Recommendations|Abnormalities|Concerns|Interpretation|Follow-up):/i);
+      if (potentialSections.length > 1) {
+        return (
+          <>
+            {potentialSections.map((section, index) => {
+              // Extract heading if present
+              const headingMatch = section.match(/^(Summary|Overview|Assessment|Findings|Recommendations|Abnormalities|Concerns|Interpretation|Follow-up):/i);
+              
+              if (headingMatch && index > 0) {
+                const heading = headingMatch[1];
+                const content = section.substring(heading.length + 1).trim();
                 
-                if (headingMatch && index > 0) {
-                  const heading = headingMatch[1];
-                  const content = section.substring(heading.length + 1).trim();
-                  
-                  let icon = '📋';
-                  if (/summary|overview/i.test(heading)) icon = '📝';
-                  if (/assessment|findings|interpretation/i.test(heading)) icon = '🔍';
-                  if (/recommendations|follow-up/i.test(heading)) icon = '✅';
-                  if (/abnormalities|concerns/i.test(heading)) icon = '⚠️';
-                  
-                  return (
-                    <div key={index} className={styles.analysisSection}>
-                      <h4 className={styles.sectionTitle}>
-                        <span className={styles.sectionIcon}>{icon}</span>
-                        {heading}
-                      </h4>
-                      <div className={styles.analysisBox}>
-                        {content.split('\n').map((paragraph, i) => (
-                          <p key={i}>{highlightValues(paragraph)}</p>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
+                let icon = '📋';
+                if (/summary|overview/i.test(heading)) icon = '📝';
+                if (/assessment|findings|interpretation/i.test(heading)) icon = '🔍';
+                if (/recommendations|follow-up/i.test(heading)) icon = '✅';
+                if (/abnormalities|concerns/i.test(heading)) icon = '⚠️';
                 
-                // First section or no clear heading
-                if (index === 0 || !headingMatch) {
-                  return (
-                    <div key={index} className={styles.analysisBox}>
-                      {section.split('\n').map((paragraph, i) => (
+                return (
+                  <div key={index} className={styles.analysisSection}>
+                    <h4 className={styles.sectionTitle}>
+                      <span className={styles.sectionIcon}>{icon}</span>
+                      {heading}
+                    </h4>
+                    <div className={styles.analysisBox}>
+                      {content.split('\n').map((paragraph, i) => (
                         <p key={i}>{highlightValues(paragraph)}</p>
                       ))}
                     </div>
-                  );
-                }
-              })}
-            </>
-          );
-        }
-        
-        // If no sections detected, just return the formatted text
-        return (
-          <div className={styles.analysisBox}>
-            {analysisText.split('\n').map((paragraph, i) => (
-              <p key={i}>{highlightValues(paragraph)}</p>
-            ))}
-          </div>
-        );
-      };
-      
-      // Highlight values in the text
-      const highlightValues = (text) => {
-        // Try to highlight abnormal values
-        const abnormalPattern = /(\bnot normal\b|\babnormal\b|\bhigh\b|\blow\b|\belevated\b|\bdecreased\b|\bincreased\b|\bexceeds\b)/gi;
-        const normalPattern = /(\bnormal\b|\bwithin normal\b|\bhealthy\b|\boptimal\b)/gi;
-        
-        return text
-          .replace(abnormalPattern, match => `<span class="${styles.abnormalValue}">${match}</span>`)
-          .replace(normalPattern, match => `<span class="${styles.normalValue}">${match}</span>`);
-      };
-      
-      try {
-        return (
-          <div className={styles.aiAnalysisContainer}>
-            <div className={styles.aiHeader}>
-              <div className={styles.aiIcon}>🧠</div>
-              <div>
-                <h3 className={styles.aiTitle}>AI Health Insights</h3>
-                <p className={styles.aiSubtitle}>Generated {new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-            
-            {typeof aiAnalysis === 'string'
-              ? formatAndStructureAnalysis(aiAnalysis)
-              : <div className={styles.analysisBox}>{aiAnalysis}</div>
-            }
-            
-            <div className={styles.aiAnalysisDisclaimer}>
-              <strong>Important:</strong> This analysis is generated by AI and should not replace professional medical advice. Always consult with a healthcare provider about your test results.
-            </div>
-          </div>
-        );
-      } catch (err) {
-        // Fallback to just displaying as is
-        return (
-          <div className={styles.aiAnalysisSection}>
-            <pre className={styles.analysisBox}>{aiAnalysis}</pre>
-            <p className={styles.aiAnalysisDisclaimer}>
-              This analysis is generated by AI and should not replace professional medical advice.
-            </p>
-          </div>
+                  </div>
+                );
+              }
+              
+              // First section or no clear heading
+              if (index === 0 || !headingMatch) {
+                return (
+                  <div key={index} className={styles.analysisBox}>
+                    {section.split('\n').map((paragraph, i) => (
+                      <p key={i}>{highlightValues(paragraph)}</p>
+                    ))}
+                  </div>
+                );
+              }
+              
+              return null; // Just to ensure we return something for each map iteration
+            })}
+          </>
         );
       }
+      
+      // If no sections detected, just return the formatted text
+      return (
+        <div className={styles.analysisBox}>
+          {analysisText.split('\n').map((paragraph, i) => (
+            <p key={i}>{highlightValues(paragraph)}</p>
+          ))}
+        </div>
+      );
     };
+    
+    // Highlight values in the text
+    const highlightValues = (text) => {
+      // Try to highlight abnormal values
+      const abnormalPattern = /(\bnot normal\b|\babnormal\b|\bhigh\b|\blow\b|\belevated\b|\bdecreased\b|\bincreased\b|\bexceeds\b)/gi;
+      const normalPattern = /(\bnormal\b|\bwithin normal\b|\bhealthy\b|\boptimal\b)/gi;
+      
+      return text
+        .replace(abnormalPattern, match => `<span class="${styles.abnormalValue}">${match}</span>`)
+        .replace(normalPattern, match => `<span class="${styles.normalValue}">${match}</span>`);
+    };
+    
+    try {
+      return (
+        <div className={styles.aiAnalysisContainer}>
+          <div className={styles.aiHeader}>
+            <div className={styles.aiIcon}>🧠</div>
+            <div>
+              <h3 className={styles.aiTitle}>AI Health Insights</h3>
+              <p className={styles.aiSubtitle}>Generated {new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+          
+          {typeof aiAnalysis === 'string'
+            ? formatAndStructureAnalysis(aiAnalysis)
+            : <div className={styles.analysisBox}>{aiAnalysis}</div>
+          }
+          
+          <div className={styles.aiAnalysisDisclaimer}>
+            <strong>Important:</strong> This analysis is generated by AI and should not replace professional medical advice. Always consult with a healthcare provider about your test results.
+          </div>
+        </div>
+      );
     } catch (err) {
       // Fallback to just displaying as is
       return (
@@ -307,11 +295,6 @@ export default function ReportDetails() {
         </div>
       );
     }
-  };
-  
-  // Helper to format AI analysis text
-  const formatAIAnalysis = (text) => {
-    return text;
   };
 
   if (loading) {
