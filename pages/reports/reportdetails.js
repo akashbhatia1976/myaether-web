@@ -153,150 +153,175 @@ export default function ReportDetails() {
     ));
   };
 
-  const renderAIAnalysis = () => {
-    if (analyzing) {
-      return (
-        <div className={styles.analysisLoading}>
-          <div className={styles.loadingIcon}>🧠</div>
-          <p>Our AI is analyzing your medical report...</p>
-          <p>This may take a few moments</p>
-        </div>
-      );
-    }
-    
-    if (!aiAnalysis) {
-      return (
-        <div className={styles.noDataMessage}>
-          <button onClick={fetchAIAnalysis} className={styles.analyzeButton}>
-            <span className={styles.analyzeIcon}>🧠</span>
-            Generate AI Health Insights
-          </button>
-          <p>Let our AI analyze this report to give you personalized health insights.</p>
-        </div>
-      );
-    }
-    
-    // For a better presentation, try to parse the AI analysis into sections
-    const formatAndStructureAnalysis = (analysisText) => {
-      if (!analysisText) return null;
+    const renderAIAnalysis = () => {
+      if (analyzing) {
+        return (
+          <div className={styles.analysisLoading}>
+            <div className={styles.loadingIcon}>🧠</div>
+            <p>Our AI is analyzing your medical report...</p>
+            <p>This may take a few moments</p>
+          </div>
+        );
+      }
       
-      // Handle case where analysis is just warning text
-      if (analysisText.startsWith('⚠️')) {
+      if (!aiAnalysis) {
+        return (
+          <div className={styles.noDataMessage}>
+            <button onClick={fetchAIAnalysis} className={styles.analyzeButton}>
+              <span className={styles.analyzeIcon}>🧠</span>
+              Generate AI Health Insights
+            </button>
+            <p>Let our AI analyze this report to give you personalized health insights.</p>
+          </div>
+        );
+      }
+      
+      // For a better presentation, try to parse the AI analysis into sections
+      const formatAndStructureAnalysis = (analysisText) => {
+        if (!analysisText) return null;
+        
+        // Handle case where analysis is just warning text
+        if (analysisText.startsWith('⚠️')) {
+          return (
+            <div className={styles.analysisBox}>
+              <div dangerouslySetInnerHTML={{ __html: analysisText }} />
+            </div>
+          );
+        }
+        
+        // Check if analysis already contains HTML
+        const containsHtml = /<[a-z][\s\S]*>/i.test(analysisText);
+        
+        // If the analysis already contains HTML, we'll render it directly
+        if (containsHtml) {
+          return (
+            <div className={styles.analysisBox}>
+              <div dangerouslySetInnerHTML={{ __html: analysisText }} />
+            </div>
+          );
+        }
+        
+        // Try to split by common section headers
+        const potentialSections = analysisText.split(/\n\s*(?=Summary:|Overview:|Assessment:|Findings:|Recommendations:|Abnormalities:|Concerns:|Interpretation:|Follow-up:|###)/gi);
+        
+        if (potentialSections.length > 1) {
+          return (
+            <>
+              {potentialSections.map((section, index) => {
+                // Extract heading if present
+                const headingMatch = section.match(/^(Summary|Overview|Assessment|Findings|Recommendations|Abnormalities|Concerns|Interpretation|Follow-up|###\s*[\w\s]+):/i);
+                
+                if (headingMatch && index > 0) {
+                  let heading = headingMatch[1];
+                  // Clean up markdown-style headings
+                  heading = heading.replace(/^###\s*/, '');
+                  const content = section.substring(headingMatch[0].length).trim();
+                  
+                  let icon = '📋';
+                  if (/summary|overview/i.test(heading)) icon = '📝';
+                  if (/assessment|findings|interpretation/i.test(heading)) icon = '🔍';
+                  if (/recommendations|follow-up/i.test(heading)) icon = '✅';
+                  if (/abnormalities|concerns/i.test(heading)) icon = '⚠️';
+                  
+                  return (
+                    <div key={index} className={styles.analysisSection}>
+                      <h4 className={styles.sectionTitle}>
+                        <span className={styles.sectionIcon}>{icon}</span>
+                        {heading}
+                      </h4>
+                      <div className={styles.analysisBox}>
+                        {content.split('\n').map((paragraph, i) => {
+                          const highlightedText = highlightValues(paragraph);
+                          return <p key={i} dangerouslySetInnerHTML={{ __html: highlightedText }} />;
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // First section or no clear heading
+                if (index === 0 || !headingMatch) {
+                  return (
+                    <div key={index} className={styles.analysisBox}>
+                      {section.split('\n').map((paragraph, i) => {
+                        const highlightedText = highlightValues(paragraph);
+                        return <p key={i} dangerouslySetInnerHTML={{ __html: highlightedText }} />;
+                      })}
+                    </div>
+                  );
+                }
+                
+                return null; // Just to ensure we return something for each map iteration
+              })}
+            </>
+          );
+        }
+        
+        // If no sections detected, just return the formatted text
         return (
           <div className={styles.analysisBox}>
-            {analysisText}
+            {analysisText.split('\n').map((paragraph, i) => {
+              const highlightedText = highlightValues(paragraph);
+              return <p key={i} dangerouslySetInnerHTML={{ __html: highlightedText }} />;
+            })}
           </div>
         );
-      }
+      };
       
-      // Try to split by common section headers
-      // Simple check for common section patterns
-      const potentialSections = analysisText.split(/\n\s*(?=Summary:|Overview:|Assessment:|Findings:|Recommendations:|Abnormalities:|Concerns:|Interpretation:|Follow-up:)/gi);
+      // Highlight values in the text only if there are no HTML tags
+      const highlightValues = (text) => {
+        // Check if the text already contains HTML
+        if (/<[a-z][\s\S]*>/i.test(text)) {
+          return text; // Return as is if HTML is present
+        }
+        
+        // Try to highlight abnormal values
+        const abnormalPattern = /(\bnot normal\b|\babnormal\b|\bhigh\b|\blow\b|\belevated\b|\bdecreased\b|\bincreased\b|\bexceeds\b)/gi;
+        const normalPattern = /(\bnormal\b|\bwithin normal\b|\bhealthy\b|\boptimal\b)/gi;
+        
+        return text
+          .replace(abnormalPattern, match => `<span class="${styles.abnormalValue}">${match}</span>`)
+          .replace(normalPattern, match => `<span class="${styles.normalValue}">${match}</span>`);
+      };
       
-      if (potentialSections.length > 1) {
+      try {
         return (
-          <>
-            {potentialSections.map((section, index) => {
-              // Extract heading if present
-              const headingMatch = section.match(/^(Summary|Overview|Assessment|Findings|Recommendations|Abnormalities|Concerns|Interpretation|Follow-up):/i);
-              
-              if (headingMatch && index > 0) {
-                const heading = headingMatch[1];
-                const content = section.substring(heading.length + 1).trim();
-                
-                let icon = '📋';
-                if (/summary|overview/i.test(heading)) icon = '📝';
-                if (/assessment|findings|interpretation/i.test(heading)) icon = '🔍';
-                if (/recommendations|follow-up/i.test(heading)) icon = '✅';
-                if (/abnormalities|concerns/i.test(heading)) icon = '⚠️';
-                
-                return (
-                  <div key={index} className={styles.analysisSection}>
-                    <h4 className={styles.sectionTitle}>
-                      <span className={styles.sectionIcon}>{icon}</span>
-                      {heading}
-                    </h4>
-                    <div className={styles.analysisBox}>
-                      {content.split('\n').map((paragraph, i) => (
-                        <p key={i}>{highlightValues(paragraph)}</p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              }
-              
-              // First section or no clear heading
-              if (index === 0 || !headingMatch) {
-                return (
-                  <div key={index} className={styles.analysisBox}>
-                    {section.split('\n').map((paragraph, i) => (
-                      <p key={i}>{highlightValues(paragraph)}</p>
-                    ))}
-                  </div>
-                );
-              }
-              
-              return null; // Just to ensure we return something for each map iteration
-            })}
-          </>
-        );
-      }
-      
-      // If no sections detected, just return the formatted text
-      return (
-        <div className={styles.analysisBox}>
-          {analysisText.split('\n').map((paragraph, i) => (
-            <p key={i}>{highlightValues(paragraph)}</p>
-          ))}
-        </div>
-      );
-    };
-    
-    // Highlight values in the text
-    const highlightValues = (text) => {
-      // Try to highlight abnormal values
-      const abnormalPattern = /(\bnot normal\b|\babnormal\b|\bhigh\b|\blow\b|\belevated\b|\bdecreased\b|\bincreased\b|\bexceeds\b)/gi;
-      const normalPattern = /(\bnormal\b|\bwithin normal\b|\bhealthy\b|\boptimal\b)/gi;
-      
-      return text
-        .replace(abnormalPattern, match => `<span class="${styles.abnormalValue}">${match}</span>`)
-        .replace(normalPattern, match => `<span class="${styles.normalValue}">${match}</span>`);
-    };
-    
-    try {
-      return (
-        <div className={styles.aiAnalysisContainer}>
-          <div className={styles.aiHeader}>
-            <div className={styles.aiIcon}>🧠</div>
-            <div>
-              <h3 className={styles.aiTitle}>AI Health Insights</h3>
-              <p className={styles.aiSubtitle}>Generated {new Date().toLocaleDateString()}</p>
+          <div className={styles.aiAnalysisContainer}>
+            <div className={styles.aiHeader}>
+              <div className={styles.aiIcon}>🧠</div>
+              <div>
+                <h3 className={styles.aiTitle}>AI Health Insights</h3>
+                <p className={styles.aiSubtitle}>Generated {new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+            
+            {typeof aiAnalysis === 'string'
+              ? formatAndStructureAnalysis(aiAnalysis)
+              : <div className={styles.analysisBox}>
+                  <div dangerouslySetInnerHTML={{ __html: JSON.stringify(aiAnalysis) }} />
+                </div>
+            }
+            
+            <div className={styles.aiAnalysisDisclaimer}>
+              <strong>Important:</strong> This analysis is generated by AI and should not replace professional medical advice. Always consult with a healthcare provider about your test results.
             </div>
           </div>
-          
-          {typeof aiAnalysis === 'string'
-            ? formatAndStructureAnalysis(aiAnalysis)
-            : <div className={styles.analysisBox}>{aiAnalysis}</div>
-          }
-          
-          <div className={styles.aiAnalysisDisclaimer}>
-            <strong>Important:</strong> This analysis is generated by AI and should not replace professional medical advice. Always consult with a healthcare provider about your test results.
+        );
+      } catch (err) {
+        console.error("Error rendering AI analysis:", err);
+        // Fallback to just displaying as is
+        return (
+          <div className={styles.aiAnalysisSection}>
+            <div className={styles.analysisBox}>
+              <div dangerouslySetInnerHTML={{ __html: typeof aiAnalysis === 'string' ? aiAnalysis : JSON.stringify(aiAnalysis) }} />
+            </div>
+            <p className={styles.aiAnalysisDisclaimer}>
+              This analysis is generated by AI and should not replace professional medical advice.
+            </p>
           </div>
-        </div>
-      );
-    } catch (err) {
-      // Fallback to just displaying as is
-      return (
-        <div className={styles.aiAnalysisSection}>
-          <pre className={styles.analysisBox}>{aiAnalysis}</pre>
-          <p className={styles.aiAnalysisDisclaimer}>
-            This analysis is generated by AI and should not replace professional medical advice.
-          </p>
-        </div>
-      );
-    }
-  };
-
+        );
+      }
+    };
   if (loading) {
     return (
       <div className={styles.loadingState}>
