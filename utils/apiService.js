@@ -1,11 +1,20 @@
 // 📁 myaether-web/utils/apiService.js
+import axios from 'axios';
 
+// Base configuration
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 console.log("🌐 BASE_URL:", BASE_URL);
 
 const TIMEOUT = 60000;
 
-// Cookie-compatible token functions
+// Create axios instance with default configuration
+const axiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: TIMEOUT,
+  withCredentials: true, // ✅ Ensures cookies are sent in cross-origin requests
+});
+
+// Cookie-compatible token functions (keeping for compatibility)
 const getCookie = (name) => {
   if (typeof document === 'undefined') {
     return null; // We're on the server side
@@ -25,69 +34,70 @@ const getCookie = (name) => {
 // Token helper that works in both client and server contexts
 const getToken = () => {
   if (typeof window !== 'undefined') {
-    // Client-side: try cookies first, then localStorage
-    const cookieToken = getCookie('token');
-    if (cookieToken) return cookieToken;
+    // Client-side: try localStorage first (more reliable cross-domain)
+    const localStorageToken = localStorage.getItem("token");
+    if (localStorageToken) return localStorageToken;
     
-    return localStorage.getItem("token") || null;
+    // Then try cookies
+    return getCookie('token') || null;
   }
   
   // Server-side - token should be passed via context in getServerSideProps
   return null;
 };
 
-const fetchWithTimeout = async (url, options = {}) => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+// Add request interceptor to include auth token on all requests
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    console.log("📡 Request:", config.method?.toUpperCase(), config.url);
+    console.log("📬 Headers:", config.headers);
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-  const finalOptions = {
-    ...options,
-    signal: controller.signal,
-    credentials: 'include', // ✅ Ensures cookies/tokens are sent in cross-origin requests
-    mode: 'cors', // Explicitly state we're doing CORS requests
-  };
-
-  console.log("📡 Fetch:", url);
-  console.log("📬 Headers:", finalOptions.headers);
-
-  try {
-    const response = await fetch(url, finalOptions);
-
-    // Check for authentication errors specifically
-    if (response.status === 401) {
+// Add response interceptor for centralized error handling
+axiosInstance.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle 401 Unauthorized errors
+    if (error.response && error.response.status === 401) {
       console.error("🔒 Authentication error: Unauthorized");
+      
       // Clear invalid credentials
       if (typeof window !== 'undefined') {
         localStorage.removeItem("token");
         document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "userId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "healthId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       }
-      throw new Error("Authentication failed. Please log in again.");
+      
+      return Promise.reject(new Error("Authentication failed. Please log in again."));
     }
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-      throw new Error(errorData.message || `HTTP error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`❌ Fetch error (${url}):`, error.message);
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
+    
+    // Get the error message from the response if possible
+    const errorMessage = error.response?.data?.message ||
+                         `HTTP error: ${error.response?.status || 'unknown'}`;
+    
+    console.error(`❌ API error:`, errorMessage);
+    return Promise.reject(new Error(errorMessage));
   }
-};
+);
 
-// ✅ Improved Auth Headers with better error handling
+// ✅ Keep the getAuthHeaders function for compatibility
 const getAuthHeaders = () => {
-// Try to get token from multiple sources
-   const token = getCookie('token') || localStorage.getItem("token");
-  
+  const token = getToken();
   
   if (!token) {
     console.error("❌ Authentication token is missing");
@@ -101,6 +111,7 @@ const getAuthHeaders = () => {
   };
 };
 
+// ✅ Keep for compatibility
 const getAuthFetchOptions = (method = "GET", body = null) => {
   const headers = getAuthHeaders();
   return {
@@ -110,15 +121,13 @@ const getAuthFetchOptions = (method = "GET", body = null) => {
   };
 };
 
-// ✅ Core API Calls with improved error handling
+// ✅ Core API Calls with Axios
 const getUserDetails = async () => {
   console.log("🔐 getUserDetails() using token:", getToken());
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/users/me`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+    const response = await axiosInstance.get('/users/me');
+    return response.data;
   } catch (error) {
     console.error("❌ Failed to get user details:", error.message);
     throw error;
@@ -133,18 +142,15 @@ const getReports = async (userId) => {
   }
   
   try {
-    const headers = getAuthHeaders();
-    return await fetchWithTimeout(`${BASE_URL}/reports/${encodeURIComponent(userId)}`, {
-      method: "GET",
-      headers,
-    });
+    const response = await axiosInstance.get(`/reports/${encodeURIComponent(userId)}`);
+    return response.data;
   } catch (error) {
     console.error(`❌ Failed to get reports for user ${userId}:`, error.message);
     throw error;
   }
 };
 
-// ✅ Upload Report with improved error handling
+// ✅ Upload Report with Axios
 const uploadReport = async (
   userId,
   reportDate,
@@ -159,138 +165,137 @@ const uploadReport = async (
   formData.append("reportName", reportName);
   formData.append("autoCreateUser", autoCreateUser.toString());
 
+  // Get token explicitly for this request
   const token = getToken();
   if (!token) {
     throw new Error("Authentication required to upload reports");
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/upload`, {
-      method: "POST",
+    const response = await axiosInstance.post('/upload', formData, {
       headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-      credentials: 'include',
+        // Don't set Content-Type here - axios will set it correctly with boundary for FormData
+        Authorization: `Bearer ${token}`
+      }
     });
-
-    if (response.status === 401) {
-      // Clear invalid credentials
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem("token");
-        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      }
-      throw new Error("Authentication failed. Please log in again.");
-    }
-
-    if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        throw new Error(error.message || "Upload failed");
-      } else {
-        const text = await response.text();
-        console.error("❌ Non-JSON response:", text);
-        throw new Error("Upload failed. Server returned unexpected response.");
-      }
-    }
-
-    return await response.json();
+    
+    return response.data;
   } catch (error) {
     console.error("❌ Error uploading report:", error.message);
     throw error;
   }
 };
 
-// ✅ Share Report function with improved error handling
+// ✅ Share Report function with Axios
 const shareReport = async (payload) => {
   if (!payload.ownerId || !payload.sharedWith || !payload.reportId) {
     throw new Error("Missing required fields for sharing a report");
   }
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/share/share-report`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
+    const response = await axiosInstance.post('/share/share-report', payload);
+    return response.data;
   } catch (error) {
     console.error("❌ Error sharing report:", error.message);
     throw error;
   }
 };
 
-// ✅ Share All Reports function with improved error handling
+// ✅ Share All Reports function with Axios
 const shareAllReports = async (payload) => {
   if (!payload.ownerId || !payload.sharedWith) {
     throw new Error("Missing required fields for sharing reports");
   }
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/share/share-all`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
+    const response = await axiosInstance.post('/share/share-all', payload);
+    return response.data;
   } catch (error) {
     console.error("❌ Error sharing all reports:", error.message);
     throw error;
   }
 };
 
-//✅ Get Shared By me Reports
+// ✅ Get Shared By me Reports with Axios
 const getSharedReportsByUser = async (userId) => {
   if (!userId) {
     throw new Error("User ID is required");
   }
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/share/shared-by/${encodeURIComponent(userId)}`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+    const response = await axiosInstance.get(`/share/shared-by/${encodeURIComponent(userId)}`);
+    return response.data;
   } catch (error) {
     console.error(`❌ Error getting reports shared by user ${userId}:`, error.message);
     throw error;
   }
 };
 
-//✅ Get Reports Shared with me
+// ✅ Get Reports Shared with me using Axios
 const getReportsSharedWithUser = async (userId) => {
   if (!userId) {
     throw new Error("User ID is required");
   }
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/share/shared-with/${encodeURIComponent(userId)}`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
+    const response = await axiosInstance.get(`/share/shared-with/${encodeURIComponent(userId)}`);
+    return response.data;
   } catch (error) {
     console.error(`❌ Error getting reports shared with user ${userId}:`, error.message);
     throw error;
   }
 };
 
-//✅ Revoke Shared Access
+// ✅ Revoke Shared Access with Axios
 const revokeSharedReport = async (payload) => {
   if (!payload.ownerId || !payload.sharedWith) {
     throw new Error("Missing required fields for revoking shared access");
   }
   
   try {
-    return await fetchWithTimeout(`${BASE_URL}/share/revoke`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
+    const response = await axiosInstance.post('/share/revoke', payload);
+    return response.data;
   } catch (error) {
     console.error("❌ Error revoking shared access:", error.message);
     throw error;
   }
 };
 
-// ✅ Centralized Export
+// Keep the original fetchWithTimeout for any legacy code that might use it directly
+const fetchWithTimeout = async (url, options = {}) => {
+  console.warn("⚠️ fetchWithTimeout is deprecated. Please use Axios methods directly.");
+  
+  try {
+    const method = options.method?.toLowerCase() || 'get';
+    const headers = options.headers || {};
+    const body = options.body ? JSON.parse(options.body) : undefined;
+    
+    let response;
+    
+    // Handle different HTTP methods
+    if (method === 'get') {
+      response = await axiosInstance.get(url, { headers });
+    } else if (method === 'post') {
+      response = await axiosInstance.post(url, body, { headers });
+    } else if (method === 'put') {
+      response = await axiosInstance.put(url, body, { headers });
+    } else if (method === 'delete') {
+      response = await axiosInstance.delete(url, {
+        headers,
+        data: body
+      });
+    } else {
+      throw new Error(`Unsupported method: ${method}`);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Fetch error (${url}):`, error.message);
+    throw error;
+  }
+};
+
+// ✅ Centralized Export (keeping same exports for compatibility)
 export {
   BASE_URL,
   fetchWithTimeout,
@@ -305,4 +310,6 @@ export {
   getSharedReportsByUser,
   getReportsSharedWithUser,
   revokeSharedReport,
+  // Export axios instance in case it's needed elsewhere
+  axiosInstance
 };
