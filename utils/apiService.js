@@ -261,6 +261,35 @@ const revokeSharedReport = async (payload) => {
   }
 };
 
+/**
+ * Search reports using NLP (Natural Language Processing)
+ * This allows users to search with natural language queries
+ * @param {string} userId - The user ID
+ * @param {string} query - The natural language query text
+ * @returns {Promise<Array>} - Search results matching the query
+ */
+const searchReportsWithNLP = async (userId, query) => {
+  if (!userId) {
+    throw new Error("User ID is required for search");
+  }
+  
+  if (!query || !query.trim()) {
+    throw new Error("Search query cannot be empty");
+  }
+  
+  try {
+    const response = await axiosInstance.post('/search/nlp', {
+      userId,
+      query: query.trim()
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ NLP search failed:`, error.message);
+    throw error;
+  }
+};
+
 // Keep the original fetchWithTimeout for any legacy code that might use it directly
 const fetchWithTimeout = async (url, options = {}) => {
   console.warn("⚠️ fetchWithTimeout is deprecated. Please use Axios methods directly.");
@@ -310,8 +339,7 @@ export {
   getSharedReportsByUser,
   getReportsSharedWithUser,
   revokeSharedReport,
+  searchReportsWithNLP, // Added to centralized exports
   // Export axios instance in case it's needed elsewhere
   axiosInstance
 };
-
-

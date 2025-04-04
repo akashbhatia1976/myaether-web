@@ -1,13 +1,8 @@
-// pages/dashboard/index.js
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import styles from "../../styles/dashboard.module.css";
-import {
-  getUserDetails,
-  getReports,
-  searchReportsWithNLP
-} from "../../utils/apiService";
+import { getUserDetails, getReports } from "../../utils/apiService";
 
 // Add server-side authentication check
 export async function getServerSideProps(context) {
@@ -24,7 +19,7 @@ export async function getServerSideProps(context) {
   }
   
   return {
-    props: {},
+    props: {}, // Will be passed to the page component
   };
 }
 
@@ -35,13 +30,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  
-  // NLP Search states
-  const [queryText, setQueryText] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
 
-  // Fetch user data and reports
+  // Simplified useEffect without token checking (since we do server-side auth)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -81,30 +71,13 @@ export default function Dashboard() {
     router.replace("/auth/login");
   };
 
-  // NLP Search function
-  const handleNlpSearch = async () => {
-    if (!queryText.trim()) return;
-    
-    setSearching(true);
-    setSearchResults([]);
-    
-    try {
-      const results = await searchReportsWithNLP(userData.userId, queryText);
-      setSearchResults(results);
-      console.log("🔍 Search results:", results);
-    } catch (error) {
-      console.error("❌ Search failed:", error.message);
-      alert("Search failed. Please try a different query.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const handleUpload = () => router.push("/reports/upload");
+  
   const handleShareAll = () => router.push({
     pathname: "/reports/managesharereports",
     query: { userId: userData?.userId },
   });
+  
   const handleViewShared = () => router.push("/reports/sharedreports");
 
   const getTopParameters = (extracted) => {
@@ -182,82 +155,6 @@ export default function Dashboard() {
           <p className={styles.welcomeSubtitle}>Manage and analyze your health reports</p>
         </section>
         
-        {/* NLP Search Section - New addition */}
-        <section className={styles.nlpSearchSection}>
-          <div className={styles.searchContainer}>
-            <div className={styles.searchInputWrapper}>
-              <svg className={styles.searchIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search your reports (e.g. 'Hb in October')"
-                value={queryText}
-                onChange={(e) => setQueryText(e.target.value)}
-                className={styles.nlpSearchInput}
-              />
-            </div>
-            <button
-              onClick={handleNlpSearch}
-              className={styles.nlpSearchButton}
-              disabled={searching || !queryText.trim()}
-            >
-              {searching ? "Searching..." : "Search"}
-            </button>
-          </div>
-
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <div className={styles.searchResults}>
-              <h3 className={styles.searchResultsTitle}>Search Results</h3>
-              <div className={styles.searchResultsList}>
-                {searchResults.map((item, index) => (
-                  <div key={`result-${index}`} className={styles.searchResultCard}>
-                    <div className={styles.resultRow}>
-                      <span className={styles.resultLabel}>Test:</span>
-                      <span className={styles.resultValue}>{item.testName}</span>
-                    </div>
-                    <div className={styles.resultRow}>
-                      <span className={styles.resultLabel}>Value:</span>
-                      <span className={styles.resultValue}>{item.value} {item.unit}</span>
-                    </div>
-                    <div className={styles.resultRow}>
-                      <span className={styles.resultLabel}>Date:</span>
-                      <span className={styles.resultValue}>{new Date(item.date).toDateString()}</span>
-                    </div>
-                    <div className={styles.resultRow}>
-                      <span className={styles.resultLabel}>Report:</span>
-                      <span className={styles.resultValue}>{item.fileName}</span>
-                    </div>
-                    <button
-                      className={styles.viewReportButton}
-                      onClick={() =>
-                        router.push({
-                          pathname: "/reports/reportdetails",
-                          query: {
-                            reportId: item.reportId,
-                            userId: userData.userId,
-                          },
-                        })
-                      }
-                    >
-                      View Report
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {searching && (
-            <div className={styles.searchingIndicator}>
-              <div className={styles.spinner}></div>
-              <p>Searching through your reports...</p>
-            </div>
-          )}
-        </section>
-        
         <section className={styles.actionsContainer}>
           <button onClick={handleUpload} className={styles.actionButton}>
             <span className={styles.actionIcon}>📤</span>
@@ -278,7 +175,7 @@ export default function Dashboard() {
             <h3 className={styles.sectionTitle}>Your Reports</h3>
             <input
               type="text"
-              placeholder="Filter reports..."
+              placeholder="Search reports..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={styles.searchInput}

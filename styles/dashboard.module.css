@@ -303,3 +303,156 @@
   padding: 48px 0;
   font-size: 16px;
 }
+
+/* Add these styles to your existing dashboard.module.css file */
+
+/* NLP Search Styles */
+.nlpSearchSection {
+  margin-bottom: 24px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.searchContainer {
+  display: flex;
+  gap: 10px;
+}
+
+.searchInputWrapper {
+  flex-grow: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0 15px;
+}
+
+.searchIcon {
+  width: 18px;
+  height: 18px;
+  color: #9ca3af;
+  margin-right: 10px;
+}
+
+.nlpSearchInput {
+  flex-grow: 1;
+  border: none;
+  background: transparent;
+  padding: 14px 0;
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+}
+
+.nlpSearchButton {
+  padding: 0 20px;
+  background-color: #0d9488;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  min-width: 120px;
+}
+
+.nlpSearchButton:hover {
+  background-color: #0b7a71;
+}
+
+.nlpSearchButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Search Results Styles */
+.searchResults {
+  margin-top: 20px;
+}
+
+.searchResultsTitle {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1f2937;
+}
+
+.searchResultsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.searchResultCard {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.searchResultCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.resultRow {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.resultLabel {
+  font-weight: 600;
+  color: #1f2937;
+  margin-right: 8px;
+}
+
+.resultValue {
+  color: #4b5563;
+}
+
+.viewReportButton {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 0;
+  background-color: #e6f7f5;
+  color: #0d9488;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.viewReportButton:hover {
+  background-color: #d1f0ed;
+}
+
+/* Loading Indicator */
+.searchingIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 24px;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #0d9488;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
