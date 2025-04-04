@@ -456,3 +456,65 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Add these styles to your dashboard.module.css file */
+
+.visualizationContainer {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.visualizationContainer h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Make the results display in a more organized way */
+.searchResultsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* Add a subtle visual indicator for abnormal values */
+.abnormalValue {
+  color: #EF4444;
+  font-weight: 500;
+}
+
+.normalValue {
+  color: #10B981;
+  font-weight: 500;
+}
+
+/* Make sure the tooltip looks good */
+:global(.recharts-tooltip-wrapper) {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+:global(.recharts-default-tooltip) {
+  background-color: white !important;
+  border-color: #e5e7eb !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+}
+
+/* Add responsive styles for smaller screens */
+@media (max-width: 768px) {
+  .searchResultsList {
+    grid-template-columns: 1fr;
+  }
+  
+  .visualizationContainer {
+    padding: 15px;
+    margin-bottom: 16px;
+  }
+}

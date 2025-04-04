@@ -8,7 +8,6 @@ import {
   getReports,
   searchReportsWithNLP
 } from "../../utils/apiService";
-import SearchResultsVisualization from "../../components/SearchResultsVisualization";
 
 // Add server-side authentication check
 export async function getServerSideProps(context) {
@@ -83,31 +82,31 @@ export default function Dashboard() {
   };
 
   // NLP Search function
-  const handleNlpSearch = async () => {
-    if (!queryText.trim()) return;
-    
-    setSearching(true);
-    setSearchResults([]);
-    
-    try {
-      const response = await searchReportsWithNLP(userData.userId, queryText);
+    const handleNlpSearch = async () => {
+      if (!queryText.trim()) return;
       
-      // Check if response has the expected structure
-      if (response && response.success && Array.isArray(response.reports)) {
-        setSearchResults(response.reports);
-        console.log("🔍 Search results:", response.reports);
-      } else {
-        console.error("❌ Unexpected response format:", response);
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error("❌ Search failed:", error.message);
-      alert("Search failed. Please try a different query.");
+      setSearching(true);
       setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
-  };
+      
+      try {
+        const response = await searchReportsWithNLP(userData.userId, queryText);
+        
+        // Check if response has the expected structure
+        if (response && response.success && Array.isArray(response.reports)) {
+          setSearchResults(response.reports);
+          console.log("🔍 Search results:", response.reports);
+        } else {
+          console.error("❌ Unexpected response format:", response);
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error("❌ Search failed:", error.message);
+        alert("Search failed. Please try a different query.");
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    };
 
   const handleUpload = () => router.push("/reports/upload");
   const handleShareAll = () => router.push({
@@ -205,11 +204,6 @@ export default function Dashboard() {
                 value={queryText}
                 onChange={(e) => setQueryText(e.target.value)}
                 className={styles.nlpSearchInput}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && queryText.trim()) {
-                    handleNlpSearch();
-                  }
-                }}
               />
             </div>
             <button
@@ -225,12 +219,6 @@ export default function Dashboard() {
           {searchResults.length > 0 && (
             <div className={styles.searchResults}>
               <h3 className={styles.searchResultsTitle}>Search Results</h3>
-              
-              {/* Visualization Component */}
-              <div className={styles.visualizationContainer}>
-                <SearchResultsVisualization searchResults={searchResults} />
-              </div>
-              
               <div className={styles.searchResultsList}>
                 {searchResults.map((item, index) => (
                   <div key={`result-${index}`} className={styles.searchResultCard}>
