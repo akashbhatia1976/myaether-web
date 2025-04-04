@@ -9,17 +9,12 @@ const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
-  const finalOptions = {
-    ...options,
-    signal: controller.signal,
-    credentials: 'include', // ✅ Ensures cookies/tokens are sent in cross-origin requests
-  };
-
-  console.log("📡 Fetch:", url);
-  console.log("📬 Headers:", finalOptions.headers);
-
   try {
-    const response = await fetch(url, finalOptions);
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include', // ✅ Ensures cookies/tokens are sent in cross-origin requests
+    });
 
     if (!response.ok) {
       let errorData;
@@ -40,6 +35,7 @@ const fetchWithTimeout = async (url, options = {}) => {
   }
 };
 
+
 // ✅ Auth Helpers
 const getToken = () => localStorage.getItem("token");
 
@@ -47,13 +43,15 @@ const getAuthHeaders = () => {
   const token = getToken();
   return {
     Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-    Accept: "application/json",
   };
 };
 
 const getAuthFetchOptions = (method = "GET", body = null) => {
-  const headers = getAuthHeaders();
+  const headers = {
+    ...getAuthHeaders(),
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
   return {
     method,
     headers,
@@ -63,7 +61,6 @@ const getAuthFetchOptions = (method = "GET", body = null) => {
 
 // ✅ Core API Calls
 const getUserDetails = async () => {
-  console.log("🔐 getUserDetails() using token:", getToken());
   return await fetchWithTimeout(`${BASE_URL}/users/me`, {
     method: "GET",
     headers: getAuthHeaders(),
@@ -71,7 +68,6 @@ const getUserDetails = async () => {
 };
 
 const getReports = async (userId) => {
-  console.log("📄 getReports() for:", userId);
   return await fetchWithTimeout(`${BASE_URL}/reports/${encodeURIComponent(userId)}`, {
     method: "GET",
     headers: getAuthHeaders(),
@@ -88,10 +84,10 @@ const uploadReport = async (
 ) => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("userId", userId);
+  formData.append("userId", userId); // ✅ needed by backend
   formData.append("reportDate", reportDate.toISOString().split("T")[0]);
   formData.append("reportName", reportName);
-  formData.append("autoCreateUser", autoCreateUser.toString());
+  formData.append("autoCreateUser", autoCreateUser.toString()); // ✅ ensure string
 
   const token = getToken();
 
@@ -99,9 +95,9 @@ const uploadReport = async (
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
+      // ⚠️ Don't manually set Content-Type for FormData
     },
     body: formData,
-    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -128,14 +124,17 @@ export {
   getAuthFetchOptions,
   getUserDetails,
   getReports,
-  uploadReport,
+  uploadReport
 };
 
 // ✅ Share Report function
 export const shareReport = async (payload) => {
   return await fetchWithTimeout(`${BASE_URL}/share/share-report`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   });
 };
@@ -144,10 +143,15 @@ export const shareReport = async (payload) => {
 export const shareAllReports = async (payload) => {
   return await fetchWithTimeout(`${BASE_URL}/share/share-all`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   });
 };
+
+
 
 //✅ Get Shared By me Reports
 export const getSharedReportsByUser = async (userId) => {
@@ -157,7 +161,7 @@ export const getSharedReportsByUser = async (userId) => {
   });
 };
 
-//✅ Get Reports Shared with me
+//✅ Get  Reports Shared with me
 export const getReportsSharedWithUser = async (userId) => {
   return await fetchWithTimeout(`${BASE_URL}/share/shared-with/${encodeURIComponent(userId)}`, {
     method: "GET",
@@ -169,8 +173,13 @@ export const getReportsSharedWithUser = async (userId) => {
 export const revokeSharedReport = async (payload) => {
   return await fetchWithTimeout(`${BASE_URL}/share/revoke`, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: {
+      ...getAuthHeaders(),
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   });
 };
+
+
 
