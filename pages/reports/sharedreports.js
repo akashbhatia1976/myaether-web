@@ -1,3 +1,5 @@
+// 📁 pages/reports/sharedreports.js
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
@@ -12,7 +14,7 @@ export default function ShareReports() {
   const [sharedReports, setSharedReports] = useState([]);
   const [receivedReports, setReceivedReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("shared"); // "shared" or "received"
+  const [viewMode, setViewMode] = useState("shared");
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function ShareReports() {
       const data = await getSharedReportsByUser(userId);
       setSharedReports(data.sharedReports || []);
     } catch (err) {
-      console.error("Error fetching shared reports:", err);
+      console.error("❌ Error fetching shared reports:", err);
       setError("Could not load shared reports.");
     } finally {
       setIsLoading(false);
@@ -38,7 +40,7 @@ export default function ShareReports() {
       const data = await getReportsSharedWithUser(userId);
       setReceivedReports(data.sharedReports || []);
     } catch (err) {
-      console.error("Error fetching received reports:", err);
+      console.error("❌ Error fetching received reports:", err);
       setError("Could not load received reports.");
     } finally {
       setIsLoading(false);

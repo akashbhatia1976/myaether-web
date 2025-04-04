@@ -30,7 +30,7 @@ export async function getServerSideProps(context) {
 
 export default function ManageShareReports() {
   const router = useRouter();
-  const { reportId, userId: queryUserId } = router.query;
+  const { reportId } = router.query;
 
   const [userData, setUserData] = useState(null);
   const [sharedWith, setSharedWith] = useState("");
