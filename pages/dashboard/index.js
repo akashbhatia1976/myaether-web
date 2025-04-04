@@ -82,23 +82,31 @@ export default function Dashboard() {
   };
 
   // NLP Search function
-  const handleNlpSearch = async () => {
-    if (!queryText.trim()) return;
-    
-    setSearching(true);
-    setSearchResults([]);
-    
-    try {
-      const results = await searchReportsWithNLP(userData.userId, queryText);
-      setSearchResults(results);
-      console.log("🔍 Search results:", results);
-    } catch (error) {
-      console.error("❌ Search failed:", error.message);
-      alert("Search failed. Please try a different query.");
-    } finally {
-      setSearching(false);
-    }
-  };
+    const handleNlpSearch = async () => {
+      if (!queryText.trim()) return;
+      
+      setSearching(true);
+      setSearchResults([]);
+      
+      try {
+        const response = await searchReportsWithNLP(userData.userId, queryText);
+        
+        // Check if response has the expected structure
+        if (response && response.success && Array.isArray(response.reports)) {
+          setSearchResults(response.reports);
+          console.log("🔍 Search results:", response.reports);
+        } else {
+          console.error("❌ Unexpected response format:", response);
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error("❌ Search failed:", error.message);
+        alert("Search failed. Please try a different query.");
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    };
 
   const handleUpload = () => router.push("/reports/upload");
   const handleShareAll = () => router.push({
