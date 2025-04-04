@@ -1,25 +1,31 @@
 // 📁 pages/index.js
 
 export async function getServerSideProps(context) {
-  const token = context.req.cookies.token;
+  const { req } = context;
+  const cookies = req.cookies;
+  const token = cookies.token;
 
-  if (!token) {
+  // If token exists, go to dashboard
+  if (token) {
     return {
       redirect: {
-        destination: "/auth/login",
+        destination: "/dashboard",
         permanent: false,
       },
     };
   }
 
+  // Otherwise go to login
   return {
     redirect: {
-      destination: "/dashboard",
+      destination: "/auth/login",
       permanent: false,
     },
   };
 }
 
-export default function IndexRedirect() {
-  return null; // This won't render because of SSR redirect
+export default function RedirectHome() {
+  // This will never render because getServerSideProps handles the redirect
+  return null;
 }
+
