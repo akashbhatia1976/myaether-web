@@ -41,9 +41,6 @@ export default function Dashboard() {
   const [queryText, setQueryText] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  
-  // Visualization toggle state
-  const [showVisualization, setShowVisualization] = useState(true);
 
   // Fetch user data and reports
   useEffect(() => {
@@ -119,79 +116,23 @@ export default function Dashboard() {
   });
   const handleViewShared = () => router.push("/reports/sharedreports");
 
-  // Enhanced getTopParameters function that prioritizes abnormal values
   const getTopParameters = (extracted) => {
     if (!extracted || typeof extracted !== "object") return [];
-    
     const flatParams = [];
-    
-    // Extract all parameters
     for (const category in extracted) {
       const params = extracted[category];
       if (typeof params === "object") {
         for (const [name, details] of Object.entries(params)) {
-          const value = details?.Value || details?.value || "N/A";
-          const unit = details?.Unit || details?.unit || "";
-          
-          // Look for reference ranges in different possible formats
-          const referenceRange = details?.["Reference Range"] || "";
-          let normalLow, normalHigh;
-          
-          // Try to extract normalLow and normalHigh from Reference Range if it exists
-          if (referenceRange && typeof referenceRange === 'string') {
-            // Common formats: "3.5-5.0", "< 5.0", "> 3.5", "3.5 - 5.0"
-            const rangeMatch = referenceRange.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
-            if (rangeMatch) {
-              normalLow = rangeMatch[1];
-              normalHigh = rangeMatch[2];
-            } else {
-              const lowerMatch = referenceRange.match(/>\s*(\d+\.?\d*)/);
-              const upperMatch = referenceRange.match(/<\s*(\d+\.?\d*)/);
-              if (lowerMatch) normalLow = lowerMatch[1];
-              if (upperMatch) normalHigh = upperMatch[1];
-            }
-          } else {
-            // Try to get normalLow and normalHigh directly
-            normalLow = details?.["Reference Range Low"] || details?.normalLow || details?.lowerLimit;
-            normalHigh = details?.["Reference Range High"] || details?.normalHigh || details?.upperLimit;
-          }
-          
-          // Determine if the value is out of range
-          let status = "normal";
-          let numValue = parseFloat(String(value).replace(/[^\d.-]/g, ''));
-          
-          if (!isNaN(numValue)) {
-            if (normalLow !== undefined && numValue < parseFloat(normalLow)) {
-              status = "low";
-            } else if (normalHigh !== undefined && numValue > parseFloat(normalHigh)) {
-              status = "high";
-            }
-          }
-          
           flatParams.push({
             name,
-            value,
-            unit,
+            value: details?.Value || details?.value || "N/A",
+            unit: details?.Unit || details?.unit || "",
             category,
-            status,
-            normalLow,
-            normalHigh,
-            referenceRange
           });
         }
       }
     }
-    
-    // Sort parameters - abnormal first, then by name
-    flatParams.sort((a, b) => {
-      // Abnormal parameters first
-      if (a.status !== "normal" && b.status === "normal") return -1;
-      if (a.status === "normal" && b.status !== "normal") return 1;
-      // Then sort alphabetically
-      return a.name.localeCompare(b.name);
-    });
-    
-    return flatParams.slice(0, 3); // Return top 3 parameters (prioritizing abnormal ones)
+    return flatParams.slice(0, 3);
   };
 
   const filteredReports = reports.filter((report) => {
@@ -285,33 +226,10 @@ export default function Dashboard() {
             <div className={styles.searchResults}>
               <h3 className={styles.searchResultsTitle}>Search Results</h3>
               
-              {/* Visualization Component with Toggle */}
-              <div className={styles.visualizationHeader}>
-                <h3 className={styles.visualizationTitle}>Trend Analysis</h3>
-                <button
-                  onClick={() => setShowVisualization(!showVisualization)}
-                  className={styles.toggleVisualizationButton}
-                  aria-label={showVisualization ? "Hide visualization" : "Show visualization"}
-                >
-                  {showVisualization ? (
-                    <>
-                      <span className={styles.toggleIcon}>▼</span>
-                      <span className={styles.toggleText}>Hide Chart</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className={styles.toggleIcon}>▶</span>
-                      <span className={styles.toggleText}>Show Chart</span>
-                    </>
-                  )}
-                </button>
+              {/* Visualization Component */}
+              <div className={styles.visualizationContainer}>
+                <SearchResultsVisualization searchResults={searchResults} />
               </div>
-              
-              {showVisualization && (
-                <div className={styles.visualizationContainer}>
-                  <SearchResultsVisualization searchResults={searchResults} />
-                </div>
-              )}
               
               <div className={styles.searchResultsList}>
                 {searchResults.map((item, index) => (
@@ -401,23 +319,11 @@ export default function Dashboard() {
                   
                   <ul className={styles.parameterList}>
                     {getTopParameters(report.extractedParameters).map((param, i) => (
-                      <li key={i} className={`${styles.parameterItem} ${styles[param.status + 'Item']}`}>
+                      <li key={i} className={styles.parameterItem}>
                         <span className={styles.parameterName}>{param.name}</span>
-                        <div className={styles.parameterDetails}>
-                          <span className={`${styles.parameterValue} ${styles[param.status + 'Value']}`}>
-                            {param.value} {param.unit}
-                          </span>
-                          {param.status !== "normal" && (
-                            <span className={`${styles.statusIndicator} ${styles[param.status + 'Indicator']}`}>
-                              {param.status === "high" ? "↑" : "↓"}
-                            </span>
-                          )}
-                          {param.referenceRange && (
-                            <span className={styles.referenceRange}>
-                              (Range: {param.referenceRange})
-                            </span>
-                          )}
-                        </div>
+                        <span className={styles.parameterValue}>
+                          {param.value} {param.unit}
+                        </span>
                       </li>
                     ))}
                     {getTopParameters(report.extractedParameters).length === 0 && (
