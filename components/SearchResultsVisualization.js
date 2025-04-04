@@ -28,19 +28,21 @@ const SearchResultsVisualization = ({ searchResults }) => {
       setUnit(sameParameterResults[0].unit || '');
 
       // Prepare data for chart
-      const formattedData = sameParameterResults
-        .map(result => ({
-          date: new Date(result.date),
-          value: parseFloat(result.value)
-        }))
-        .sort((a, b) => a.date - b.date) // Sort by date
-        .map(item => ({
-          date: item.date.toLocaleDateString(),
-          value: item.value,
-          // Add reference ranges if available
-          normalLow: result.normalLow,
-          normalHigh: result.normalHigh
-        }));
+        // Prepare data for chart
+        const formattedData = sameParameterResults
+          .map(result => ({
+            date: new Date(result.date),
+            value: parseFloat(result.value),
+            normalLow: result.normalLow,
+            normalHigh: result.normalHigh
+          }))
+          .sort((a, b) => a.date - b.date) // Sort by date
+          .map(item => ({
+            date: item.date.toLocaleDateString(),
+            value: item.value,
+            normalLow: item.normalLow, // Now correctly referencing item from the current map
+            normalHigh: item.normalHigh // Now correctly referencing item from the current map
+          }));
 
       setChartData(formattedData);
     } else {
