@@ -268,27 +268,28 @@ const revokeSharedReport = async (payload) => {
  * @param {string} query - The natural language query text
  * @returns {Promise<Array>} - Search results matching the query
  */
-const searchReportsWithNLP = async (userId, query) => {
-  if (!userId) {
-    throw new Error("User ID is required for search");
-  }
-  
-  if (!query || !query.trim()) {
-    throw new Error("Search query cannot be empty");
-  }
-  
-  try {
-    const response = await axiosInstance.post('/search/nlp', {
-      userId,
-      query: query.trim()
-    });
+cconst searchReportsWithNLP = async (userId, query) => {
+    if (!userId) {
+      throw new Error("User ID is required for search");
+    }
     
-    return response.data;
-  } catch (error) {
-    console.error(`❌ NLP search failed:`, error.message);
-    throw error;
-  }
-};
+    if (!query || !query.trim()) {
+      throw new Error("Search query cannot be empty");
+    }
+    
+    try {
+      // Change 'query' to 'queryText' to match backend expectation
+      const response = await axiosInstance.post('/search/nlp', {
+        userId,
+        queryText: query.trim()  // Changed from 'query' to 'queryText'
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error(`❌ NLP search failed:`, error.message);
+      throw error;
+    }
+  };
 
 // Keep the original fetchWithTimeout for any legacy code that might use it directly
 const fetchWithTimeout = async (url, options = {}) => {
