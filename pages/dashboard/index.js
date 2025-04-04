@@ -29,23 +29,33 @@ export default function Dashboard() {
   useEffect(() => {
     if (!tokenChecked || !token) return;
 
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const user = await getUserDetails();
-        setUserData(user);
+      const fetchData = async () => {
+        try {
+          setLoading(true);
 
-        const reportsData = await getReports(user.userId);
-        setReports(reportsData);
-        console.log("📦 Reports fetched:", reportsData);
+          const user = await getUserDetails();
+          setUserData(user);
 
-      } catch (err) {
-        console.error("❌ Error loading dashboard:", err.message);
-        router.replace("/auth/login");
-      } finally {
-        setLoading(false);
-      }
-    };
+          // 🔍 Let's log both sources of truth
+          const currentStateToken = token;
+          const localStorageToken = localStorage.getItem("token");
+
+          console.log("🔑 token (state):", currentStateToken);
+          console.log("🔐 token (localStorage):", localStorageToken);
+          console.log("📡 Calling getReports() with userId:", user.userId);
+
+          const reportsData = await getReports(user.userId);
+          setReports(reportsData);
+          console.log("📦 Reports fetched:", reportsData);
+
+        } catch (err) {
+          console.error("❌ Error loading dashboard:", err.message);
+          router.replace("/auth/login");
+        } finally {
+          setLoading(false);
+        }
+      };
+
 
     fetchData();
   }, [tokenChecked, token, router]);

@@ -44,7 +44,11 @@ const fetchWithTimeout = async (url, options = {}) => {
 const getToken = () => localStorage.getItem("token");
 
 const getAuthHeaders = () => {
-  const token = getToken();
+    const token = localStorage.getItem("token");
+      if (!token) {
+        console.warn("⚠️ No token found in localStorage");
+        return {}; // fail gracefully
+      }
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
@@ -72,6 +76,11 @@ const getUserDetails = async () => {
 
 const getReports = async (userId) => {
   console.log("📄 getReports() for:", userId);
+    
+    const headers = getAuthHeaders();
+      if (!headers.Authorization) {
+        throw new Error("❌ Auth token missing — cannot fetch reports.");
+      }
   return await fetchWithTimeout(`${BASE_URL}/reports/${encodeURIComponent(userId)}`, {
     method: "GET",
     headers: getAuthHeaders(),
