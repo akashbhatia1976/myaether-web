@@ -1,13 +1,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import {
-  getSharedReportsByUser,
-  getReportsSharedWithUser,
-} from "../../utils/apiService";
 
 export default function ShareReports() {
   const router = useRouter();
   const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const [sharedReports, setSharedReports] = useState([]);
   const [receivedReports, setReceivedReports] = useState([]);
@@ -23,7 +20,9 @@ export default function ShareReports() {
 
   const fetchSharedReports = async () => {
     try {
-      const data = await getSharedReportsByUser(userId);
+      const res = await fetch(`${API_BASE_URL}/api/share/shared-by/${userId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch shared reports.");
       setSharedReports(data.sharedReports || []);
     } catch (err) {
       console.error("Error fetching shared reports:", err);
@@ -35,7 +34,9 @@ export default function ShareReports() {
 
   const fetchReceivedReports = async () => {
     try {
-      const data = await getReportsSharedWithUser(userId);
+      const res = await fetch(`${API_BASE_URL}/api/share/shared-with/${userId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch received reports.");
       setReceivedReports(data.sharedReports || []);
     } catch (err) {
       console.error("Error fetching received reports:", err);
@@ -60,57 +61,49 @@ export default function ShareReports() {
     }
   };
 
-  const renderReportItem = (report) => {
-    const recipient =
-      report.sharedWithUserId?.trim() && report.sharedWithUserId !== ""
-        ? report.sharedWithUserId
-        : `${report.sharedWith} (invite sent)`;
+    const renderReportItem = (report) => {
+      const recipient =
+        report.sharedWithUserId?.trim() && report.sharedWithUserId !== ""
+          ? report.sharedWithUserId
+          : `${report.sharedWith} (invite sent)`;
 
-    return (
-      <li
-        key={report._id}
-        style={styles.reportItem}
-        onClick={() =>
-          handleReportClick(
-            report.reportId,
-            viewMode === "shared" ? userId : report.ownerId
-          )
-        }
-      >
-        <p><strong>📄 Report ID:</strong> {report.reportId}</p>
-        <p>
-          {viewMode === "shared"
-            ? `👤 Shared With: ${
-                report.sharedWithId
-                  ? report.sharedWithId
-                  : report.sharedWith
-                  ? `${report.sharedWith} (invite sent)`
-                  : "Unknown"
-              }`
-            : `📥 Shared By: ${report.ownerId}`}
-        </p>
-        <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
-      </li>
-    );
-  };
+      return (
+        <li
+          key={report._id}
+          style={styles.reportItem}
+          onClick={() =>
+            handleReportClick(
+              report.reportId,
+              viewMode === "shared" ? userId : report.ownerId
+            )
+          }
+        >
+          <p><strong>📄 Report ID:</strong> {report.reportId}</p>
+              <p>
+                {viewMode === "shared"
+                  ? `👤 Shared With: ${
+                      report.sharedWithId
+                        ? report.sharedWithId
+                        : report.sharedWith
+                        ? `${report.sharedWith} (invite sent)`
+                        : "Unknown"
+                    }`
+                  : `📥 Shared By: ${report.ownerId}`}
+              </p>
+
+          <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
+        </li>
+      );
+    };
+
 
   return (
     <div style={styles.container}>
       <h2>📑 Shared Reports</h2>
-
+          
       <div style={styles.toggleContainer}>
-        <button
-          onClick={() => setViewMode("shared")}
-          style={viewMode === "shared" ? styles.activeToggle : styles.toggle}
-        >
-          Shared by me
-        </button>
-        <button
-          onClick={() => setViewMode("received")}
-          style={viewMode === "received" ? styles.activeToggle : styles.toggle}
-        >
-          Shared with me
-        </button>
+        <button onClick={() => setViewMode("shared")} style={viewMode === "shared" ? styles.activeToggle : styles.toggle}>Shared by me</button>
+        <button onClick={() => setViewMode("received")} style={viewMode === "received" ? styles.activeToggle : styles.toggle}>Shared with me</button>
       </div>
 
       {isLoading ? (
@@ -122,10 +115,11 @@ export default function ShareReports() {
           {(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}
         </ul>
       )}
-
-      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
-        ⬅️ Back to Dashboard
-      </button>
+          
+          <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
+            ⬅️ Back to Dashboard
+          </button>
+          
     </div>
   );
 }
@@ -170,14 +164,15 @@ const styles = {
     marginBottom: 10,
     cursor: "pointer",
   },
-  backButton: {
-    marginTop: "20px",
-    padding: "10px 15px",
-    backgroundColor: "#6200ee",
-    color: "#fff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-  },
-};
+    
+    backButton: {
+      marginTop: "20px",
+      padding: "10px 15px",
+      backgroundColor: "#6200ee",
+      color: "#fff",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer",
+    },
 
+};

@@ -11,33 +11,35 @@ import {
 
 // Server-side authentication check
 export async function getServerSideProps(context) {
-  const { req } = context;
+  const { req, res } = context;
   const cookies = req.cookies;
-
+  
   if (!cookies.token) {
     return {
       redirect: {
-        destination: "/auth/login",
+        destination: '/auth/login',
         permanent: false,
-      },
+      }
     };
   }
-
+  
   return {
-    props: {},
+    props: {}, // Will be passed to the page component
   };
 }
 
 export default function ManageShareReports() {
   const router = useRouter();
   const { reportId, userId: queryUserId } = router.query;
-
+  
   const [userData, setUserData] = useState(null);
   const [sharedWith, setSharedWith] = useState("");
   const [relationshipType, setRelationshipType] = useState("Friend");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  
+  // Simplified authentication - no need for token state management
+  // since we're checking auth server-side
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -47,6 +49,7 @@ export default function ManageShareReports() {
       } catch (err) {
         console.error("❌ Error loading user data:", err);
         setError("Could not load user data. Please try logging in again.");
+        // Error is displayed on page instead of immediate redirect
       } finally {
         setLoading(false);
       }
@@ -71,6 +74,7 @@ export default function ManageShareReports() {
       permissionType: "view",
     };
 
+    // If reportId exists, share just that report, otherwise share all
     if (reportId) {
       payload.reportId = reportId;
     }
@@ -80,7 +84,7 @@ export default function ManageShareReports() {
     try {
       setLoading(true);
       setError(null);
-
+      
       let data;
       if (reportId) {
         data = await shareReport(payload);
@@ -127,7 +131,7 @@ export default function ManageShareReports() {
       <Head>
         <title>Share Health Reports | Aether Health</title>
       </Head>
-
+      
       <div style={styles.header}>
         <button
           onClick={() => router.push("/dashboard")}
@@ -136,22 +140,18 @@ export default function ManageShareReports() {
           ← Back to Dashboard
         </button>
       </div>
-
+      
       <h2 style={styles.title}>
         {reportId ? "Share Report" : "Share All Reports"}
       </h2>
-
+      
       {userData && (
         <div style={styles.userInfo}>
-          <p>
-            Sharing as: <strong>{userData.userId}</strong>
-          </p>
+          <p>Sharing as: <strong>{userData.userId}</strong></p>
         </div>
       )}
 
-      <label style={styles.label}>
-        Share with (user ID, email, or phone):
-      </label>
+      <label style={styles.label}>Share with (user ID, email, or phone):</label>
       <input
         type="text"
         placeholder="Enter user ID, email, or phone"
@@ -175,18 +175,10 @@ export default function ManageShareReports() {
 
       <button
         onClick={handleShare}
-        style={
-          loading
-            ? { ...styles.button, ...styles.buttonDisabled }
-            : styles.button
-        }
+        style={loading ? {...styles.button, ...styles.buttonDisabled} : styles.button}
         disabled={loading}
       >
-        {loading
-          ? "Sharing..."
-          : reportId
-          ? "Share Report"
-          : "Share All Reports"}
+        {loading ? "Sharing..." : reportId ? "Share Report" : "Share All Reports"}
       </button>
     </div>
   );
@@ -273,4 +265,3 @@ const styles = {
     marginBottom: "20px",
   },
 };
-
