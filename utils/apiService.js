@@ -44,6 +44,7 @@ const fetchWithTimeout = async (url, options = {}) => {
     ...options,
     signal: controller.signal,
     credentials: 'include', // ✅ Ensures cookies/tokens are sent in cross-origin requests
+    mode: 'cors', // Explicitly state we're doing CORS requests
   };
 
   console.log("📡 Fetch:", url);
@@ -84,7 +85,9 @@ const fetchWithTimeout = async (url, options = {}) => {
 
 // ✅ Improved Auth Headers with better error handling
 const getAuthHeaders = () => {
-  const token = getToken();
+// Try to get token from multiple sources
+   const token = getCookie('token') || localStorage.getItem("token");
+  
   
   if (!token) {
     console.error("❌ Authentication token is missing");
