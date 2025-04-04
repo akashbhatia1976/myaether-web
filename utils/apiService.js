@@ -268,7 +268,7 @@ const revokeSharedReport = async (payload) => {
  * @param {string} query - The natural language query text
  * @returns {Promise<Array>} - Search results matching the query
  */
-cconst searchReportsWithNLP = async (userId, query) => {
+const searchReportsWithNLP = async (userId, query) => {
     if (!userId) {
       throw new Error("User ID is required for search");
     }
@@ -290,7 +290,6 @@ cconst searchReportsWithNLP = async (userId, query) => {
       throw error;
     }
   };
-
 // Keep the original fetchWithTimeout for any legacy code that might use it directly
 const fetchWithTimeout = async (url, options = {}) => {
   console.warn("⚠️ fetchWithTimeout is deprecated. Please use Axios methods directly.");
