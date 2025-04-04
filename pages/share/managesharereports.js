@@ -67,7 +67,7 @@ export default function ManageShareReports() {
         const response = await fetch(`${BASE_URL}/share/share-all`, {
           method: "POST",
           headers,
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
           credentials: "include" // ✅ Important!
         });
 
