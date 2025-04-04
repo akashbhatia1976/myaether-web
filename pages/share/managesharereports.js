@@ -15,6 +15,7 @@ export default function ManageShareReports() {
   const [loading, setLoading] = useState(false);
   const [tokenChecked, setTokenChecked] = useState(false);
   const [token, setToken] = useState(null);
+    
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -26,6 +27,9 @@ export default function ManageShareReports() {
 
   useEffect(() => {
     if (!tokenChecked || !token) return;
+      
+    console.log("🪪 Token after check:", token);
+    console.log("🧾 Auth headers being used:", getAuthHeaders());
 
     const fetchUser = async () => {
       try {
