@@ -2,46 +2,70 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import {
   shareAllReports,
+  shareReport,
   getUserDetails,
 } from "../../utils/apiService";
 
+// Server-side authentication check
+export async function getServerSideProps(context) {
+  const { req, res } = context;
+  const cookies = req.cookies;
+  
+  if (!cookies.token) {
+    return {
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      }
+    };
+  }
+  
+  return {
+    props: {}, // Will be passed to the page component
+  };
+}
+
 export default function ManageShareReports() {
   const router = useRouter();
+  const { reportId, userId: queryUserId } = router.query;
+  
   const [userData, setUserData] = useState(null);
   const [sharedWith, setSharedWith] = useState("");
   const [relationshipType, setRelationshipType] = useState("Friend");
   const [loading, setLoading] = useState(false);
-  const [tokenChecked, setTokenChecked] = useState(false);
-  const [token, setToken] = useState(null);
-
+  const [error, setError] = useState(null);
+  
+  // Simplified authentication - no need for token state management
+  // since we're checking auth server-side
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      setToken(storedToken);
-    }
-    setTokenChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (!tokenChecked || !token) return;
-
-    const fetchUser = async () => {
+    const fetchUserData = async () => {
       try {
+        setLoading(true);
         const user = await getUserDetails();
         setUserData(user);
       } catch (err) {
-        console.error("❌ Error loading user:", err);
-        router.replace("/auth/login");
+        console.error("❌ Error loading user data:", err);
+        setError("Could not load user data. Please try logging in again.");
+        // Error is displayed on page instead of immediate redirect
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUser();
-  }, [tokenChecked, token]);
+    fetchUserData();
+  }, []);
 
   const handleShare = async () => {
-    if (!sharedWith) return alert("Please enter a user ID, email, or phone number.");
+    if (!sharedWith) {
+      return alert("Please enter a user ID, email, or phone number.");
+    }
+
+    if (!userData) {
+      return alert("User data is not loaded yet. Please try again.");
+    }
 
     const payload = {
       ownerId: userData.userId,
@@ -50,31 +74,82 @@ export default function ManageShareReports() {
       permissionType: "view",
     };
 
+    // If reportId exists, share just that report, otherwise share all
+    if (reportId) {
+      payload.reportId = reportId;
+    }
+
     console.log("📦 Payload being sent:", payload);
 
     try {
       setLoading(true);
-      const data = await shareAllReports(payload); // ✅ Centralized, authenticated call
+      setError(null);
+      
+      let data;
+      if (reportId) {
+        data = await shareReport(payload);
+      } else {
+        data = await shareAllReports(payload);
+      }
 
-      alert("✅ Reports shared successfully!");
+      alert(`✅ Report${reportId ? "" : "s"} shared successfully!`);
       setSharedWith("");
       setRelationshipType("Friend");
       router.push("/dashboard");
-
     } catch (error) {
       console.error("❌ Share error:", error);
-      alert(error.message || "Failed to share reports. Please try again.");
+      setError(error.message || "Failed to share reports. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!tokenChecked) return <p>Checking authentication...</p>;
-  if (!userData) return <p>Loading user...</p>;
+  if (loading && !userData) {
+    return (
+      <div style={styles.container}>
+        <p style={styles.loadingText}>Loading user data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <p style={styles.errorText}>{error}</p>
+        <button
+          onClick={() => router.push("/auth/login")}
+          style={styles.button}
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>Manage Report Sharing</h2>
+      <Head>
+        <title>Share Health Reports | Aether Health</title>
+      </Head>
+      
+      <div style={styles.header}>
+        <button
+          onClick={() => router.push("/dashboard")}
+          style={styles.backButton}
+        >
+          ← Back to Dashboard
+        </button>
+      </div>
+      
+      <h2 style={styles.title}>
+        {reportId ? "Share Report" : "Share All Reports"}
+      </h2>
+      
+      {userData && (
+        <div style={styles.userInfo}>
+          <p>Sharing as: <strong>{userData.userId}</strong></p>
+        </div>
+      )}
 
       <label style={styles.label}>Share with (user ID, email, or phone):</label>
       <input
@@ -98,8 +173,12 @@ export default function ManageShareReports() {
         <option value="Other">Other</option>
       </select>
 
-      <button onClick={handleShare} style={styles.button} disabled={loading}>
-        {loading ? "Sharing..." : "Share All Reports"}
+      <button
+        onClick={handleShare}
+        style={loading ? {...styles.button, ...styles.buttonDisabled} : styles.button}
+        disabled={loading}
+      >
+        {loading ? "Sharing..." : reportId ? "Share Report" : "Share All Reports"}
       </button>
     </div>
   );
@@ -115,11 +194,28 @@ const styles = {
     boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
     fontFamily: "'Segoe UI', sans-serif",
   },
+  header: {
+    marginBottom: "20px",
+  },
+  backButton: {
+    background: "none",
+    border: "none",
+    color: "#4361ee",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "0",
+  },
   title: {
-    fontSize: "20px",
+    fontSize: "24px",
     marginBottom: "20px",
     color: "#333",
     fontWeight: "600",
+  },
+  userInfo: {
+    padding: "10px",
+    backgroundColor: "#f5f8ff",
+    borderRadius: "6px",
+    marginBottom: "20px",
   },
   label: {
     display: "block",
@@ -154,5 +250,18 @@ const styles = {
     border: "none",
     cursor: "pointer",
   },
+  buttonDisabled: {
+    backgroundColor: "#a0aae8",
+    cursor: "not-allowed",
+  },
+  loadingText: {
+    textAlign: "center",
+    fontSize: "16px",
+    color: "#666",
+  },
+  errorText: {
+    color: "#e53935",
+    textAlign: "center",
+    marginBottom: "20px",
+  },
 };
-

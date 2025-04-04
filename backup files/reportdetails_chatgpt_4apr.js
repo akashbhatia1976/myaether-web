@@ -5,25 +5,6 @@ import Link from "next/link";
 import styles from "../../styles/reportdetails.module.css";
 import { getUserDetails, getAuthHeaders, BASE_URL } from '../../utils/apiService';
 
-// Add server-side authentication check
-export async function getServerSideProps(context) {
-  const { req, res } = context;
-  const cookies = req.cookies;
-  
-  if (!cookies.token) {
-    return {
-      redirect: {
-        destination: '/auth/login',
-        permanent: false,
-      }
-    };
-  }
-  
-  return {
-    props: {}, // Will be passed to the page component
-  };
-}
-
 export default function ReportDetails() {
   const router = useRouter();
   const { reportId } = router.query;

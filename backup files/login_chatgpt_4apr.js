@@ -17,28 +17,12 @@ export default function LoginPage() {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
   useEffect(() => {
-    // Check for authentication in both cookies and localStorage
-    const token = localStorage.getItem("token") || getCookie("token");
+    const token = localStorage.getItem("token");
     if (token) {
       console.log("🔄 Token found, redirecting to dashboard...");
       router.push("/dashboard");
     }
   }, [router]);
-
-  // Helper function to get cookie value
-  const getCookie = (name) => {
-    if (typeof document === 'undefined') return null;
-    
-    const cookies = document.cookie.split(';')
-      .map(cookie => cookie.trim())
-      .reduce((acc, cookie) => {
-        const [key, value] = cookie.split('=');
-        if (key && value) acc[key] = value;
-        return acc;
-      }, {});
-      
-    return cookies[name] || null;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,12 +47,7 @@ export default function LoginPage() {
 
         const data = await response.json();
 
-        // Save user details in cookies
-        document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
-        document.cookie = `userId=${data.userId}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
-        document.cookie = `healthId=${data.healthId}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
-
-        // Also save in localStorage for backward compatibility
+        // Save user details and token
         localStorage.setItem("userId", data.userId);
         localStorage.setItem("healthId", data.healthId);
         localStorage.setItem("token", data.token);

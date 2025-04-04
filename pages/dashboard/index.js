@@ -4,66 +4,70 @@ import Head from "next/head";
 import styles from "../../styles/dashboard.module.css";
 import { getUserDetails, getReports } from "../../utils/apiService";
 
+// Add server-side authentication check
+export async function getServerSideProps(context) {
+  const { req, res } = context;
+  const cookies = req.cookies;
+  
+  if (!cookies.token) {
+    return {
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      }
+    };
+  }
+  
+  return {
+    props: {}, // Will be passed to the page component
+  };
+}
+
 export default function Dashboard() {
   const router = useRouter();
-  const [token, setToken] = useState(null);
-  const [tokenChecked, setTokenChecked] = useState(false);
   const [userData, setUserData] = useState(null);
   const [reports, setReports] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
+  // Simplified useEffect without token checking (since we do server-side auth)
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) setToken(storedToken);
-    setTokenChecked(true);
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-  useEffect(() => {
-    if (tokenChecked && !token) {
-      router.replace("/auth/login");
-    }
-  }, [tokenChecked, token, router]);
+        const user = await getUserDetails();
+        setUserData(user);
 
-  useEffect(() => {
-    if (!tokenChecked || !token) return;
+        console.log("📡 Calling getReports() with userId:", user.userId);
 
-      const fetchData = async () => {
-        try {
-          setLoading(true);
+        const reportsData = await getReports(user.userId);
+        setReports(reportsData);
+        console.log("📦 Reports fetched:", reportsData);
 
-          const user = await getUserDetails();
-          setUserData(user);
-
-          // 🔍 Let's log both sources of truth
-          const currentStateToken = token;
-          const localStorageToken = localStorage.getItem("token");
-
-          console.log("🔑 token (state):", currentStateToken);
-          console.log("🔐 token (localStorage):", localStorageToken);
-          console.log("📡 Calling getReports() with userId:", user.userId);
-
-          const reportsData = await getReports(user.userId);
-          setReports(reportsData);
-          console.log("📦 Reports fetched:", reportsData);
-
-        } catch (err) {
-          console.error("❌ Error loading dashboard:", err.message);
-          router.replace("/auth/login");
-        } finally {
-          setLoading(false);
-        }
-      };
-
+      } catch (err) {
+        console.error("❌ Error loading dashboard:", err.message);
+        router.replace("/auth/login");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchData();
-  }, [tokenChecked, token, router]);
+  }, [router]);
 
   const handleLogout = () => {
+    // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     localStorage.removeItem("healthId");
+    
+    // Clear cookies
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "userId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "healthId=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    
     router.replace("/auth/login");
   };
 
@@ -119,7 +123,6 @@ export default function Dashboard() {
     });
   };
 
-  if (!tokenChecked) return <div className={styles.loading}>Checking login...</div>;
   if (loading) return <div className={styles.loading}>Loading dashboard...</div>;
   if (!userData) return <div className={styles.error}>⚠️ Unable to load user</div>;
 
