@@ -68,6 +68,7 @@ export default function ManageShareReports() {
           method: "POST",
           headers,
           body: JSON.stringify(payload)
+          credentials: "include" // ✅ Important!
         });
 
         const data = await response.json();

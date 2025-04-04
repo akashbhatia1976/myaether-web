@@ -5,13 +5,16 @@ console.log("🌐 BASE_URL:", BASE_URL);
 
 const TIMEOUT = 60000;
 
-// ✅ Utility: Fetch with timeout (good for external APIs or fallback usage)
 const fetchWithTimeout = async (url, options = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
 
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      credentials: 'include', // ✅ Ensures cookies/tokens are sent in cross-origin requests
+    });
 
     if (!response.ok) {
       let errorData;
@@ -31,6 +34,7 @@ const fetchWithTimeout = async (url, options = {}) => {
     clearTimeout(timeoutId);
   }
 };
+
 
 // ✅ Auth Helpers
 const getToken = () => localStorage.getItem("token");
