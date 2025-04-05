@@ -22,6 +22,7 @@ import {
   ChevronDown,
   Info
 } from 'lucide-react';
+import styles from '../styles/timeline.module.css';
 
 const HealthTimeline = ({ reports, userData }) => {
   const [timeRange, setTimeRange] = useState('all');
@@ -252,9 +253,9 @@ const HealthTimeline = ({ reports, userData }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="custom-tooltip">
-          <p className="tooltip-date">{formatDate(label)}</p>
-          <div className="tooltip-parameters">
+        <div className={styles.timelineTooltip}>
+          <p className={styles.tooltipDate}>{formatDate(label)}</p>
+          <div className={styles.tooltipParameters}>
             {payload.map((entry, index) => {
               const param = availableParameters.find(p => p.id === entry.dataKey);
               if (!param) return null;
@@ -268,9 +269,9 @@ const HealthTimeline = ({ reports, userData }) => {
               }
               
               return (
-                <div key={index} className="tooltip-parameter">
+                <div key={index} className={styles.tooltipParameter}>
                   <span style={{ color: entry.color }}>{param?.name}: </span>
-                  <span className={`tooltip-value tooltip-value-${status}`}>
+                  <span className={`${styles.tooltipValue} ${styles[`tooltipValue${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}>
                     {entry.value.toFixed(1)} {param?.unit}
                   </span>
                 </div>
@@ -309,8 +310,8 @@ const HealthTimeline = ({ reports, userData }) => {
   // Set active class on time range button
   const getTimeRangeButtonClass = (range) => {
     return timeRange === range
-      ? "timeline-range-button timeline-range-button-active"
-      : "timeline-range-button";
+      ? `${styles.timelineRangeButton} ${styles.timelineRangeButtonActive}`
+      : styles.timelineRangeButton;
   };
 
   // Toggle category expansion
@@ -391,17 +392,17 @@ const HealthTimeline = ({ reports, userData }) => {
   });
 
   if (loading) {
-    return <div className="timeline-loading">Loading health timeline...</div>;
+    return <div className={styles.timelineLoading}>Loading health timeline...</div>;
   }
 
   return (
-    <div className="health-timeline">
-      <div className="timeline-header">
-        <h2 className="timeline-title">Health Timeline</h2>
-        <div className="timeline-controls">
-          <div className="timeline-actions">
+    <div className={styles.healthTimeline}>
+      <div className={styles.timelineHeader}>
+        <h2 className={styles.timelineTitle}>Health Timeline</h2>
+        <div className={styles.timelineControls}>
+          <div className={styles.timelineActions}>
             <button
-              className="timeline-action-button"
+              className={styles.timelineActionButton}
               onClick={() => setShowTrends(!showTrends)}
               title="Show/Hide Trends"
             >
@@ -409,7 +410,7 @@ const HealthTimeline = ({ reports, userData }) => {
               {showTrends ? 'Hide Trends' : 'Show Trends'}
             </button>
             <button
-              className="timeline-action-button"
+              className={styles.timelineActionButton}
               onClick={exportData}
               title="Export Data"
             >
@@ -417,7 +418,7 @@ const HealthTimeline = ({ reports, userData }) => {
               Export
             </button>
             <button
-              className="timeline-action-button"
+              className={styles.timelineActionButton}
               onClick={() => setShowAddEvent(true)}
               title="Add Health Event"
             >
@@ -425,7 +426,7 @@ const HealthTimeline = ({ reports, userData }) => {
               Add Event
             </button>
           </div>
-          <div className="time-range-controls">
+          <div className={styles.timeRangeControls}>
             <button
               className={getTimeRangeButtonClass('3m')}
               onClick={() => setTimeRange('3m')}
@@ -454,21 +455,21 @@ const HealthTimeline = ({ reports, userData }) => {
         </div>
       </div>
       
-      <div className="parameter-selection">
+      <div className={styles.parameterSelection}>
         {Object.entries(parametersByCategory).map(([category, params]) => (
-          <div key={category} className="parameter-category">
+          <div key={category} className={styles.parameterCategory}>
             <div
-              className="parameter-category-header"
+              className={styles.parameterCategoryHeader}
               onClick={() => toggleCategory(category)}
             >
               <ChevronDown
                 size={16}
-                className={`category-toggle ${expandedCategories.includes(category) ? 'category-toggle-expanded' : ''}`}
+                className={`${styles.categoryToggle} ${expandedCategories.includes(category) ? styles.categoryToggleExpanded : ''}`}
               />
-              <span className="parameter-category-name">{category}</span>
+              <span className={styles.parameterCategoryName}>{category}</span>
             </div>
             {expandedCategories.includes(category) && (
-              <div className="parameter-buttons">
+              <div className={styles.parameterButtons}>
                 {params.map((param, index) => {
                   const isSelected = selectedParameters.includes(param.id);
                   const colorIndex = availableParameters.findIndex(p => p.id === param.id) % paramColors.length;
@@ -476,7 +477,7 @@ const HealthTimeline = ({ reports, userData }) => {
                   return (
                     <button
                       key={param.id}
-                      className={`parameter-button ${isSelected ? 'parameter-button-active' : ''}`}
+                      className={`${styles.parameterButton} ${isSelected ? styles.parameterButtonActive : ''}`}
                       style={{
                         borderColor: isSelected ? paramColors[colorIndex] : 'transparent',
                         color: isSelected ? paramColors[colorIndex] : '#4b5563'
@@ -492,7 +493,7 @@ const HealthTimeline = ({ reports, userData }) => {
                       {param.name}
                       {showTrends && isSelected && trends[param.id] && (
                         <span
-                          className={`trend-indicator trend-${trends[param.id].direction}`}
+                          className={`${styles.trendIndicator} ${styles[`trend${trends[param.id].direction.charAt(0).toUpperCase() + trends[param.id].direction.slice(1)}`]}`}
                           title={`${trends[param.id].direction} by ${trends[param.id].percent}%`}
                         >
                           {trends[param.id].direction === 'increasing' ? '↑' :
@@ -509,7 +510,7 @@ const HealthTimeline = ({ reports, userData }) => {
         ))}
       </div>
       
-      <div className="timeline-chart-container">
+      <div className={styles.timelineChartContainer}>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart
             data={filteredTimelineData}
@@ -603,25 +604,25 @@ const HealthTimeline = ({ reports, userData }) => {
       </div>
       
       {/* Health Events Section */}
-      <div className="health-events-section">
-        <h3 className="health-events-title">Health Events</h3>
+      <div className={styles.healthEventsSection}>
+        <h3 className={styles.healthEventsTitle}>Health Events</h3>
         
-        <div className="health-events-list">
+        <div className={styles.healthEventsList}>
           {filteredHealthEvents.length > 0 ? (
             filteredHealthEvents.map(event => (
-              <div key={event.id} className="health-event-card" style={{ borderLeftColor: eventTypeColors[event.type] }}>
-                <div className="health-event-header">
-                  <span className="health-event-date">{formatDate(event.date)}</span>
-                  <span className="health-event-type" style={{ backgroundColor: eventTypeColors[event.type] }}>
+              <div key={event.id} className={styles.healthEventCard} style={{ borderLeftColor: eventTypeColors[event.type] }}>
+                <div className={styles.healthEventHeader}>
+                  <span className={styles.healthEventDate}>{formatDate(event.date)}</span>
+                  <span className={styles.healthEventType} style={{ backgroundColor: eventTypeColors[event.type] }}>
                     {event.type}
                   </span>
                 </div>
-                <div className="health-event-title">{event.title}</div>
+                <div className={styles.healthEventTitle}>{event.title}</div>
                 {event.description && (
-                  <div className="health-event-description">{event.description}</div>
+                  <div className={styles.healthEventDescription}>{event.description}</div>
                 )}
                 <button
-                  className="health-event-delete"
+                  className={styles.healthEventDelete}
                   onClick={() => setHealthEvents(healthEvents.filter(e => e.id !== event.id))}
                 >
                   <X size={14} />
@@ -629,7 +630,7 @@ const HealthTimeline = ({ reports, userData }) => {
               </div>
             ))
           ) : (
-            <div className="health-events-empty">
+            <div className={styles.healthEventsEmpty}>
               <Info size={18} />
               <span>No health events in the selected time period</span>
             </div>
@@ -639,19 +640,19 @@ const HealthTimeline = ({ reports, userData }) => {
       
       {/* Add Event Modal */}
       {showAddEvent && (
-        <div className="event-modal-overlay">
-          <div className="event-modal">
-            <div className="event-modal-header">
+        <div className={styles.eventModalOverlay}>
+          <div className={styles.eventModal}>
+            <div className={styles.eventModalHeader}>
               <h3>Add Health Event</h3>
               <button
-                className="event-modal-close"
+                className={styles.eventModalClose}
                 onClick={() => setShowAddEvent(false)}
               >
                 <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleEventSubmit} className="event-form">
-              <div className="event-form-field">
+            <form onSubmit={handleEventSubmit} className={styles.eventForm}>
+              <div className={styles.eventFormField}>
                 <label htmlFor="event-date">Date</label>
                 <input
                   type="date"
@@ -661,7 +662,7 @@ const HealthTimeline = ({ reports, userData }) => {
                   required
                 />
               </div>
-              <div className="event-form-field">
+              <div className={styles.eventFormField}>
                 <label htmlFor="event-type">Type</label>
                 <select
                   id="event-type"
@@ -675,7 +676,7 @@ const HealthTimeline = ({ reports, userData }) => {
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div className="event-form-field">
+              <div className={styles.eventFormField}>
                 <label htmlFor="event-title">Title</label>
                 <input
                   type="text"
@@ -686,7 +687,7 @@ const HealthTimeline = ({ reports, userData }) => {
                   required
                 />
               </div>
-              <div className="event-form-field">
+              <div className={styles.eventFormField}>
                 <label htmlFor="event-description">Description (optional)</label>
                 <textarea
                   id="event-description"
@@ -696,15 +697,15 @@ const HealthTimeline = ({ reports, userData }) => {
                   rows={3}
                 />
               </div>
-              <div className="event-form-actions">
+              <div className={styles.eventFormActions}>
                 <button
                   type="button"
-                  className="event-form-cancel"
+                  className={styles.eventFormCancel}
                   onClick={() => setShowAddEvent(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="event-form-submit">
+                <button type="submit" className={styles.eventFormSubmit}>
                   Add Event
                 </button>
               </div>
@@ -713,27 +714,27 @@ const HealthTimeline = ({ reports, userData }) => {
         </div>
       )}
       
-      <div className="timeline-legend">
-        <div className="legend-item">
-          <div className="legend-marker normal"></div>
-          <div className="legend-text">Normal Value</div>
+      <div className={styles.timelineLegend}>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.normal}`}></div>
+          <div className={styles.legendText}>Normal Value</div>
         </div>
-        <div className="legend-item">
-          <div className="legend-marker high"></div>
-          <div className="legend-text">High Value</div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.high}`}></div>
+          <div className={styles.legendText}>High Value</div>
         </div>
-        <div className="legend-item">
-          <div className="legend-marker low"></div>
-          <div className="legend-text">Low Value</div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.low}`}></div>
+          <div className={styles.legendText}>Low Value</div>
         </div>
-        <div className="legend-item">
-          <div className="legend-line"></div>
-          <div className="legend-text">Reference Range</div>
+        <div className={styles.legendItem}>
+          <div className={styles.legendLine}></div>
+          <div className={styles.legendText}>Reference Range</div>
         </div>
         {filteredHealthEvents.length > 0 && (
-          <div className="legend-item">
-            <div className="legend-flag">⚑</div>
-            <div className="legend-text">Health Event</div>
+          <div className={styles.legendItem}>
+            <div className={styles.legendFlag}>⚑</div>
+            <div className={styles.legendText}>Health Event</div>
           </div>
         )}
       </div>
