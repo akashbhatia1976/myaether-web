@@ -6,8 +6,7 @@ import styles from "../../styles/dashboard.module.css";
 import {
   getUserDetails,
   getReports,
-  searchReportsWithNLP,
-  axiosInstance
+  searchReportsWithNLP
 } from "../../utils/apiService";
 import SearchResultsVisualization from "../../components/SearchResultsVisualization";
 
@@ -45,10 +44,6 @@ export default function Dashboard() {
   
   // Visualization toggle state
   const [showVisualization, setShowVisualization] = useState(true);
-  
-  // Parameters state
-  const [reportParameters, setReportParameters] = useState({});
-  const [fetchingParameters, setFetchingParameters] = useState(false);
 
   // Fetch user data and reports
   useEffect(() => {
@@ -75,57 +70,6 @@ export default function Dashboard() {
 
     fetchData();
   }, [router]);
-
-  // Fetch parameters for reports
-  useEffect(() => {
-    const fetchParameters = async () => {
-      if (!reports.length || fetchingParameters) return;
-      
-      setFetchingParameters(true);
-      const paramsMap = {};
-      
-      try {
-        // Try first if reports already have extractedParameters
-        const reportsWithParams = reports.filter(report => report.extractedParameters);
-        
-        if (reportsWithParams.length > 0) {
-          // If some reports already have parameters, use those
-          reportsWithParams.forEach(report => {
-            paramsMap[report._id || report.reportId] = report.extractedParameters;
-          });
-          console.log(`Using ${reportsWithParams.length} reports with embedded parameters`);
-        } else {
-          // Otherwise fetch parameters for each report
-          console.log("Fetching parameters separately for each report");
-          
-          // Fetch for first 10 reports to avoid too many requests
-          await Promise.all(
-            reports.slice(0, 10).map(async (report) => {
-              const reportId = report._id || report.reportId;
-              try {
-                const response = await axiosInstance.get(`/parameters/${reportId}`);
-                if (response.data) {
-                  paramsMap[reportId] = response.data;
-                  console.log(`Fetched parameters for report ${reportId}`);
-                }
-              } catch (error) {
-                console.error(`Failed to fetch parameters for report ${reportId}:`, error.message);
-              }
-            })
-          );
-        }
-        
-        setReportParameters(paramsMap);
-        console.log(`Parameters available for ${Object.keys(paramsMap).length} reports`);
-      } catch (error) {
-        console.error("Error handling parameters:", error);
-      } finally {
-        setFetchingParameters(false);
-      }
-    };
-    
-    fetchParameters();
-  }, [reports]);
 
   const handleLogout = () => {
     // Clear localStorage
@@ -175,108 +119,94 @@ export default function Dashboard() {
   });
   const handleViewShared = () => router.push("/reports/sharedreports");
 
-  // Helper function to determine parameter status
-  const determineStatus = (value, normalLow, normalHigh) => {
-    if (value === undefined || value === null) return "normal";
-    
-    const stringValue = String(value);
-    const numValue = parseFloat(stringValue.replace(/[^\d.-]/g, ''));
-    
-    if (isNaN(numValue)) return "normal";
-    
-    if (normalLow !== undefined && normalLow !== null && numValue < parseFloat(normalLow)) {
-      return "low";
-    } else if (normalHigh !== undefined && normalHigh !== null && numValue > parseFloat(normalHigh)) {
-      return "high";
-    }
-    
-    return "normal";
-  };
-
-  // Function to get top parameters for a report
-  const getTopParameters = (report) => {
-    const reportId = report._id || report.reportId;
-    const parameters = reportParameters[reportId];
-    
-    if (!parameters) {
-      return []; // No parameters available for this report
-    }
-    
-    const paramList = [];
-    
-    // Handle object of parameters (most likely case based on ReportDetailsScreen.js)
-    if (typeof parameters === 'object' && !Array.isArray(parameters)) {
-      for (const key in parameters) {
-        if (!parameters.hasOwnProperty(key)) continue;
-        
-        const param = parameters[key];
-        
-        // Handle different parameter value formats
-        let value, unit, normalLow, normalHigh, referenceRange;
-        
-        if (typeof param === 'object') {
-          // If param is an object with value/unit properties
-          value = param.Value || param.value || JSON.stringify(param);
-          unit = param.Unit || param.unit || '';
-          normalLow = param.lowerLimit || param.normalLow || param["Reference Range Low"];
-          normalHigh = param.upperLimit || param.normalHigh || param["Reference Range High"];
-          referenceRange = param.referenceRange || param["Reference Range"] || '';
-        } else {
-          // If param is a primitive value
-          value = param;
-          unit = '';
-        }
-        
-        // Determine if value is abnormal
-        const status = determineStatus(value, normalLow, normalHigh);
-        
-        paramList.push({
-          name: key,
-          value,
-          unit,
-          category: 'General',
-          status,
-          normalLow,
-          normalHigh,
-          referenceRange
-        });
+  // Enhanced getTopParameters function that prioritizes abnormal values
+    const getTopParameters = (report) => {
+      if (!report || !report.extractedParameters) {
+        console.log("Report missing or has no extractedParameters:", report?._id || report?.reportId);
+        return [];
       }
-    }
-    // Handle array of parameters
-    else if (Array.isArray(parameters)) {
-      parameters.forEach(param => {
-        if (!param.name && !param.parameter) return;
-        
-        const name = param.name || param.parameter;
-        const value = param.value || param.result || 'N/A';
-        const unit = param.unit || '';
-        const status = determineStatus(value, param.normalLow, param.normalHigh);
-        
-        paramList.push({
-          name,
-          value,
-          unit,
-          category: param.category || 'General',
-          status,
-          normalLow: param.normalLow || param.lowerLimit,
-          normalHigh: param.normalHigh || param.upperLimit,
-          referenceRange: param.referenceRange || ''
-        });
+      
+      const extractedParams = report.extractedParameters;
+      const paramList = [];
+      
+      // If extractedParameters is a nested object (categories -> parameters)
+      if (typeof extractedParams === 'object' && !Array.isArray(extractedParams)) {
+        for (const category in extractedParams) {
+          const categoryParams = extractedParams[category];
+          
+          // If the category contains an object of parameters
+          if (typeof categoryParams === 'object' && !Array.isArray(categoryParams)) {
+            for (const paramName in categoryParams) {
+              const paramDetails = categoryParams[paramName];
+              const value = typeof paramDetails === 'object' ?
+                             (paramDetails.Value || paramDetails.value || JSON.stringify(paramDetails)) :
+                             String(paramDetails);
+              const unit = typeof paramDetails === 'object' ? (paramDetails.Unit || paramDetails.unit || '') : '';
+              
+              // Get reference ranges if available
+              let normalLow, normalHigh, referenceRange;
+              if (typeof paramDetails === 'object') {
+                referenceRange = paramDetails["Reference Range"] || '';
+                normalLow = paramDetails["Reference Range Low"] || paramDetails.normalLow;
+                normalHigh = paramDetails["Reference Range High"] || paramDetails.normalHigh;
+              }
+              
+              // Determine if value is abnormal
+              let status = "normal";
+              let numValue = parseFloat(String(value).replace(/[^\d.-]/g, ''));
+              
+              if (!isNaN(numValue)) {
+                if (normalLow !== undefined && numValue < parseFloat(normalLow)) {
+                  status = "low";
+                } else if (normalHigh !== undefined && numValue > parseFloat(normalHigh)) {
+                  status = "high";
+                }
+              }
+              
+              paramList.push({
+                name: paramName,
+                value,
+                unit,
+                category,
+                status,
+                normalLow,
+                normalHigh,
+                referenceRange
+              });
+            }
+          }
+        }
+      }
+      // If extractedParameters is a simple key-value object
+      else if (typeof extractedParams === 'object') {
+        for (const key in extractedParams) {
+          if (extractedParams.hasOwnProperty(key)) {
+            const value = extractedParams[key];
+            paramList.push({
+              name: key,
+              value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+              unit: '',
+              category: 'General',
+              status: 'normal'
+            });
+          }
+        }
+      }
+      
+      // Sort parameters - abnormal first, then by name
+      paramList.sort((a, b) => {
+        // Abnormal parameters first
+        if (a.status !== "normal" && b.status === "normal") return -1;
+        if (a.status === "normal" && b.status !== "normal") return 1;
+        // Then sort alphabetically
+        return a.name.localeCompare(b.name);
       });
-    }
+      
+      console.log(`Extracted ${paramList.length} parameters from report ${report._id || report.reportId}`);
+      
+      return paramList.slice(0, 3); // Return top 3 parameters (prioritizing abnormal ones)
+    };
     
-    // Sort parameters - abnormal first, then by name
-    paramList.sort((a, b) => {
-      // Abnormal parameters first
-      if (a.status !== "normal" && b.status === "normal") return -1;
-      if (a.status === "normal" && b.status !== "normal") return 1;
-      // Then sort alphabetically
-      return a.name.localeCompare(b.name);
-    });
-    
-    return paramList.slice(0, 3); // Return top 3 parameters (prioritizing abnormal ones)
-  };
-
   const filteredReports = reports.filter((report) => {
     if (activeTab !== "all") return true;
     if (!searchTerm) return true;
@@ -483,7 +413,7 @@ export default function Dashboard() {
                   <p className={styles.reportDate}>{formatDate(report.date)}</p>
                   
                   <ul className={styles.parameterList}>
-                    {getTopParameters(report).map((param, i) => (
+                    {getTopParameters(report.extractedParameters).map((param, i) => (
                       <li key={i} className={`${styles.parameterItem} ${styles[param.status + 'Item']}`}>
                         <span className={styles.parameterName}>{param.name}</span>
                         <div className={styles.parameterDetails}>
@@ -503,14 +433,9 @@ export default function Dashboard() {
                         </div>
                       </li>
                     ))}
-                    {getTopParameters(report).length === 0 && !fetchingParameters && (
+                    {getTopParameters(report.extractedParameters).length === 0 && (
                       <li className={styles.parameterItem}>
-                        <span className={styles.parameterName}>No parameters available</span>
-                      </li>
-                    )}
-                    {getTopParameters(report).length === 0 && fetchingParameters && (
-                      <li className={styles.parameterItem}>
-                        <span className={styles.parameterName}>Loading parameters...</span>
+                        <span className={styles.parameterName}>No parameters extracted</span>
                       </li>
                     )}
                   </ul>
