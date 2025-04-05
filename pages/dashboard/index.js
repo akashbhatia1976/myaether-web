@@ -233,6 +233,10 @@ export default function Dashboard() {
     query: { userId: userData?.userId },
   });
   const handleViewShared = () => router.push("/reports/sharedreports");
+    
+    // Format the reports for the timeline - using our utility function
+  const timelineReports = formatReportsForTimeline(reports);
+  console.log("Reports for timeline:", timelineReports.length);
 
   // Helper function to determine parameter status
   const determineStatus = (value, normalLow, normalHigh) => {

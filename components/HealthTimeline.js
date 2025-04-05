@@ -59,90 +59,201 @@ const HealthTimeline = ({ reports, userData }) => {
       return;
     }
 
+    console.log("Reports received by HealthTimeline:", reports);
     setLoading(true);
 
     // Function to extract parameters from all reports
     const extractParameters = () => {
-      // For testing until real parameters are available
-      // In production, this would extract real parameters from reports
-      const mockParameters = [
-        { id: 'hemoglobin', name: 'Hemoglobin', unit: 'g/dL', category: 'Hematology', normalRange: '13.5-17.5' },
-        { id: 'wbc', name: 'White Blood Cells', unit: 'K/uL', category: 'Hematology', normalRange: '4.5-11.0' },
-        { id: 'rbc', name: 'Red Blood Cells', unit: 'M/uL', category: 'Hematology', normalRange: '4.5-5.9' },
-        { id: 'glucose', name: 'Glucose', unit: 'mg/dL', category: 'Chemistry', normalRange: '70-100' },
-        { id: 'creatinine', name: 'Creatinine', unit: 'mg/dL', category: 'Chemistry', normalRange: '0.7-1.3' },
-        { id: 'sodium', name: 'Sodium', unit: 'mEq/L', category: 'Chemistry', normalRange: '135-145' },
-        { id: 'cholesterol', name: 'Total Cholesterol', unit: 'mg/dL', category: 'Lipids', normalRange: '125-200' },
-        { id: 'ldl', name: 'LDL Cholesterol', unit: 'mg/dL', category: 'Lipids', normalRange: '0-100' },
-        { id: 'hdl', name: 'HDL Cholesterol', unit: 'mg/dL', category: 'Lipids', normalRange: '40-60' },
-        { id: 'systolic', name: 'Systolic BP', unit: 'mmHg', category: 'Vitals', normalRange: '90-120' },
-        { id: 'diastolic', name: 'Diastolic BP', unit: 'mmHg', category: 'Vitals', normalRange: '60-80' },
-        { id: 'weight', name: 'Weight', unit: 'kg', category: 'Vitals', normalRange: '50-100' }
-      ];
-
-      setAvailableParameters(mockParameters);
+      // Extract unique parameters from all reports
+      const parameters = [];
+      const parameterIds = new Set();
       
-      // Group parameters by category
-      const groupedParameters = mockParameters.reduce((acc, param) => {
-        if (!acc[param.category]) {
-          acc[param.category] = [];
+      reports.forEach(report => {
+        if (!report.extractedParameters) return;
+        
+        // Handle both array and object formats for parameters
+        const paramsArray = Array.isArray(report.extractedParameters)
+          ? report.extractedParameters
+          : Object.entries(report.extractedParameters).map(([name, value]) => ({
+              name,
+              value: typeof value === 'object' ? value.value || value.Value : value,
+              unit: typeof value === 'object' ? value.unit || value.Unit : '',
+              normalRange: typeof value === 'object' ?
+                (value.referenceRange ||
+                (value.normalLow && value.normalHigh ? `${value.normalLow}-${value.normalHigh}` : '') ||
+                (value.lowerLimit && value.upperLimit ? `${value.lowerLimit}-${value.upperLimit}` : '')) : ''
+            }));
+        
+        paramsArray.forEach(param => {
+          const paramName = param.name || '';
+          const paramId = paramName.toLowerCase().replace(/\s+/g, '_');
+          
+          if (!paramId || parameterIds.has(paramId)) return;
+          
+          parameterIds.add(paramId);
+          parameters.push({
+            id: paramId,
+            name: paramName,
+            unit: param.unit || '',
+            category: param.category || 'General',
+            normalRange: param.normalRange || ''
+          });
+        });
+      });
+      
+      // If no parameters were found, add some mock ones for testing
+      if (parameters.length === 0) {
+        console.log("No real parameters found, using mock parameters for testing");
+        const mockParameters = [
+          { id: 'hemoglobin', name: 'Hemoglobin', unit: 'g/dL', category: 'Hematology', normalRange: '13.5-17.5' },
+          { id: 'wbc', name: 'White Blood Cells', unit: 'K/uL', category: 'Hematology', normalRange: '4.5-11.0' },
+          { id: 'glucose', name: 'Glucose', unit: 'mg/dL', category: 'Chemistry', normalRange: '70-100' }
+        ];
+        setAvailableParameters(mockParameters);
+        
+        // Group mock parameters by category
+        const groupedMockParameters = mockParameters.reduce((acc, param) => {
+          if (!acc[param.category]) {
+            acc[param.category] = [];
+          }
+          acc[param.category].push(param);
+          return acc;
+        }, {});
+        
+        setParametersByCategory(groupedMockParameters);
+        setExpandedCategories(Object.keys(groupedMockParameters));
+        
+        // Set first parameter as default selected
+        if (mockParameters.length > 0 && selectedParameters.length === 0) {
+          setSelectedParameters([mockParameters[0].id]);
         }
-        acc[param.category].push(param);
-        return acc;
-      }, {});
-      
-      setParametersByCategory(groupedParameters);
-      setExpandedCategories(Object.keys(groupedParameters));
-      
-      // Set first parameter as default selected
-      if (mockParameters.length > 0 && selectedParameters.length === 0) {
-        setSelectedParameters([mockParameters[0].id]);
+      } else {
+        console.log("Found real parameters:", parameters);
+        setAvailableParameters(parameters);
+        
+        // Group parameters by category
+        const groupedParameters = parameters.reduce((acc, param) => {
+          if (!acc[param.category]) {
+            acc[param.category] = [];
+          }
+          acc[param.category].push(param);
+          return acc;
+        }, {});
+        
+        setParametersByCategory(groupedParameters);
+        setExpandedCategories(Object.keys(groupedParameters));
+        
+        // Set first parameter as default selected
+        if (parameters.length > 0 && selectedParameters.length === 0) {
+          setSelectedParameters([parameters[0].id]);
+        }
       }
     };
 
     // Function to generate timeline data from reports
     const generateTimelineData = () => {
-      // For testing until real parameters are available
-      // This would be replaced with actual parameter extraction from reports
-      const today = new Date();
-      const mockTimelineData = [];
+      // Sort reports by date
+      const sortedReports = [...reports].sort((a, b) => {
+        const dateA = new Date(a.date || a.reportDate);
+        const dateB = new Date(b.date || b.reportDate);
+        return dateA - dateB;
+      });
       
-      // Create data points for the last 12 months
-      for (let i = 0; i < 12; i++) {
-        const date = new Date(today);
-        date.setMonth(date.getMonth() - i);
+      // Create data points from actual reports
+      const timelineData = sortedReports.map(report => {
+        const reportDate = new Date(report.date || report.reportDate);
         
+        // Create a data point with the date
         const dataPoint = {
-          date: date.toISOString().split('T')[0],
-          dateObj: date,
-          // Generate random values for each parameter
-          hemoglobin: 14 + Math.random() * 2 - 1,
-          wbc: 7 + Math.random() * 4 - 2,
-          rbc: 5.2 + Math.random() * 1 - 0.5,
-          glucose: 85 + Math.random() * 30 - 15,
-          creatinine: 1 + Math.random() * 0.6 - 0.3,
-          sodium: 140 + Math.random() * 10 - 5,
-          cholesterol: 170 + Math.random() * 50 - 25,
-          ldl: 90 + Math.random() * 40 - 20,
-          hdl: 50 + Math.random() * 20 - 10,
-          systolic: 115 + Math.random() * 30 - 15,
-          diastolic: 75 + Math.random() * 20 - 10,
-          weight: 80 + Math.random() * 10 - 5
+          date: reportDate.toISOString().split('T')[0],
+          dateObj: reportDate,
+          reportId: report._id || report.reportId
         };
         
-        // Add some abnormal values for demonstration
-        if (i === 2) dataPoint.hemoglobin = 12.0; // Low
-        if (i === 5) dataPoint.glucose = 115; // High
-        if (i === 8) dataPoint.ldl = 130; // High
-        if (i === 3) dataPoint.systolic = 135; // High
+        // Add parameter values to the data point
+        if (report.extractedParameters) {
+          // Handle both array and object formats
+          if (Array.isArray(report.extractedParameters)) {
+            report.extractedParameters.forEach(param => {
+              if (!param.name) return;
+              
+              const paramId = param.name.toLowerCase().replace(/\s+/g, '_');
+              let value = param.value;
+              
+              // Try to extract a numeric value
+              if (typeof value === 'string') {
+                const numericValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+                if (!isNaN(numericValue)) {
+                  value = numericValue;
+                }
+              }
+              
+              dataPoint[paramId] = value;
+            });
+          } else {
+            // Handle object format
+            Object.entries(report.extractedParameters).forEach(([name, param]) => {
+              const paramId = name.toLowerCase().replace(/\s+/g, '_');
+              let value;
+              
+              if (typeof param === 'object') {
+                value = param.value || param.Value;
+              } else {
+                value = param;
+              }
+              
+              // Try to extract a numeric value
+              if (typeof value === 'string') {
+                const numericValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+                if (!isNaN(numericValue)) {
+                  value = numericValue;
+                }
+              }
+              
+              dataPoint[paramId] = value;
+            });
+          }
+        }
         
-        mockTimelineData.push(dataPoint);
+        return dataPoint;
+      });
+      
+      // If no data was generated, create some mock data for testing
+      if (timelineData.length === 0 || !timelineData.some(item =>
+          availableParameters.some(param => item[param.id] !== undefined))) {
+        console.log("No real timeline data found, using mock data for testing");
+        const today = new Date();
+        const mockTimelineData = [];
+        
+        // Create data points for the last 12 months
+        for (let i = 0; i < 12; i++) {
+          const date = new Date(today);
+          date.setMonth(date.getMonth() - i);
+          
+          const dataPoint = {
+            date: date.toISOString().split('T')[0],
+            dateObj: date,
+            // Generate random values for each parameter
+            hemoglobin: 14 + Math.random() * 2 - 1,
+            wbc: 7 + Math.random() * 4 - 2,
+            glucose: 85 + Math.random() * 30 - 15
+          };
+          
+          // Add some abnormal values for demonstration
+          if (i === 2) dataPoint.hemoglobin = 12.0; // Low
+          if (i === 5) dataPoint.glucose = 115; // High
+          
+          mockTimelineData.push(dataPoint);
+        }
+        
+        // Sort by date ascending
+        mockTimelineData.sort((a, b) => a.dateObj - b.dateObj);
+        
+        setTimelineData(mockTimelineData);
+      } else {
+        console.log("Generated real timeline data:", timelineData);
+        setTimelineData(timelineData);
       }
-      
-      // Sort by date ascending
-      mockTimelineData.sort((a, b) => a.dateObj - b.dateObj);
-      
-      setTimelineData(mockTimelineData);
     };
 
     // Mock health events
@@ -189,7 +300,7 @@ const HealthTimeline = ({ reports, userData }) => {
     const trends = {};
     
     selectedParameters.forEach(paramId => {
-      const values = filteredTimelineData.map(item => item[paramId]);
+      const values = filteredTimelineData.map(item => item[paramId]).filter(val => val !== undefined);
       const n = values.length;
       
       if (n < 2) {
@@ -519,227 +630,230 @@ const HealthTimeline = ({ reports, userData }) => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDate} />
             <YAxis />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            
-            {selectedParameters.map((paramId, index) => {
-              const param = availableParameters.find(p => p.id === paramId);
-              if (!param) return null;
+          <Tooltip content={<CustomTooltip />} />
+              <Legend />
               
-              const colorIndex = availableParameters.findIndex(p => p.id === paramId) % paramColors.length;
-              const color = paramColors[colorIndex];
+              {selectedParameters.map((paramId, index) => {
+                  const param = availableParameters.find(p => p.id === paramId);
+                  if (!param) return null;
+                  
+                  const colorIndex = availableParameters.findIndex(p => p.id === paramId) % paramColors.length;
+                  const color = paramColors[colorIndex];
+                  
+                  // Extract normal range if available
+                  let refLines = [];
+                  if (param.normalRange) {
+                      const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
+                      refLines = [
+                          <ReferenceLine
+                           key={`${paramId}-min`}
+                           y={min}
+                           stroke={color}
+                           strokeDasharray="3 3"
+                           opacity={0.6}
+                           />,
+                           <ReferenceLine
+                           key={`${paramId}-max`}
+                           y={max}
+                           stroke={color}
+                           strokeDasharray="3 3"
+                           opacity={0.6}
+                           />
+                      ];
+                  }
+                  
+                  return [
+                      <Line
+                       key={paramId}
+                       type="monotone"
+                       dataKey={paramId}
+                       name={param.name}
+                       stroke={color}
+                       strokeWidth={2}
+                       dot={renderDot}
+                       activeDot={{ r: 8 }}
+                       />,
+                       ...refLines
+                  ];
+              })}
               
-              // Extract normal range if available
-              let refLines = [];
-              if (param.normalRange) {
-                const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
-                refLines = [
-                  <ReferenceLine
-                    key={`${paramId}-min`}
-                    y={min}
-                    stroke={color}
-                    strokeDasharray="3 3"
-                    opacity={0.6}
-                  />,
-                  <ReferenceLine
-                    key={`${paramId}-max`}
-                    y={max}
-                    stroke={color}
-                    strokeDasharray="3 3"
-                    opacity={0.6}
-                  />
-                ];
-              }
+              {/* Add event markers to chart */}
+              {filteredHealthEvents.map(event => {
+                  // Find the closest data point to the event date
+                  const eventDate = new Date(event.date);
+                  const closestDataPoint = filteredTimelineData.reduce((closest, dataPoint) => {
+                      const dataPointDate = new Date(dataPoint.date);
+                      const currentDiff = Math.abs(dataPointDate - eventDate);
+                      const closestDiff = closest ? Math.abs(new Date(closest.date) - eventDate) : Infinity;
+                      return currentDiff < closestDiff ? dataPoint : closest;
+                  }, null);
+                  
+                  if (!closestDataPoint) return null;
+                  
+                  // Use the Y-value of the first selected parameter for placement
+                  const paramId = selectedParameters[0];
+                  if (!paramId || !closestDataPoint[paramId]) return null;
+                  
+                  return (
+                          <ReferenceLine
+                          key={`event-${event.id}`}
+                          x={closestDataPoint.date}
+                          stroke={eventTypeColors[event.type]}
+                          strokeWidth={2}
+                          opacity={0.7}
+                          label={{
+                              value: "⚑",
+                              position: 'top',
+                              fill: eventTypeColors[event.type],
+                              fontSize: 16
+                          }}
+                          />
+                          );
+              })}
+              </LineChart>
+              </ResponsiveContainer>
+              </div>
               
-              return [
-                <Line
-                  key={paramId}
-                  type="monotone"
-                  dataKey={paramId}
-                  name={param.name}
-                  stroke={color}
-                  strokeWidth={2}
-                  dot={renderDot}
-                  activeDot={{ r: 8 }}
-                />,
-                ...refLines
-              ];
-            })}
-            
-            {/* Add event markers to chart */}
-            {filteredHealthEvents.map(event => {
-              // Find the closest data point to the event date
-              const eventDate = new Date(event.date);
-              const closestDataPoint = filteredTimelineData.reduce((closest, dataPoint) => {
-                const dataPointDate = new Date(dataPoint.date);
-                const currentDiff = Math.abs(dataPointDate - eventDate);
-                const closestDiff = closest ? Math.abs(new Date(closest.date) - eventDate) : Infinity;
-                return currentDiff < closestDiff ? dataPoint : closest;
-              }, null);
+              {/* Health Events Section */}
+              <div className={styles.healthEventsSection}>
+              <h3 className={styles.healthEventsTitle}>Health Events</h3>
               
-              if (!closestDataPoint) return null;
+              <div className={styles.healthEventsList}>
+              {filteredHealthEvents.length > 0 ? (
+                                                  filteredHealthEvents.map(event => (
+                                                                                     <div key={event.id} className={styles.healthEventCard} style={{ borderLeftColor: eventTypeColors[event.type] }}>
+                                                                                     <div className={styles.healthEventHeader}>
+                                                                                     <span className={styles.healthEventDate}>{formatDate(event.date)}</span>
+                                                                                     <span className={styles.healthEventType} style={{ backgroundColor: eventTypeColors[event.type] }}>
+                                                                                     {event.type}
+                                                                                     </span>
+                                                                                     </div>
+                                                                                     <div className={styles.healthEventTitle}>{event.title}</div>
+                                                                                     {event.description && (
+                                                                                                            <div className={styles.healthEventDescription}>{event.description}</div>
+                                                                                                            )}
+                                                                                     <button
+                                                                                     className={styles.healthEventDelete}
+                                                                                     onClick={() => setHealthEvents(healthEvents.filter(e => e.id !== event.id))}
+                                                                                     >
+                                                                                     <X size={14} />
+                                                                                     </button>
+                                                                                     </div>
+                                                                                     ))
+                                                  ) : (
+                                                       <div className={styles.healthEventsEmpty}>
+                                                       <Info size={18} />
+                                                       <span>No health events in the selected time period</span>
+                                                       </div>
+                                                       )}
+              </div>
+              </div>
               
-              // Use the Y-value of the first selected parameter for placement
-              const paramId = selectedParameters[0];
-              if (!paramId || !closestDataPoint[paramId]) return null;
+              {/* Add Event Modal */}
+              {showAddEvent && (
+                                <div className={styles.eventModalOverlay}>
+                                <div className={styles.eventModal}>
+                                <div className={styles.eventModalHeader}>
+                                <h3>Add Health Event</h3>
+                                <button
+                                className={styles.eventModalClose}
+                                onClick={() => setShowAddEvent(false)}
+                                >
+                                <X size={18} />
+                                </button>
+                                </div>
+                                <form onSubmit={handleEventSubmit} className={styles.eventForm}>
+                                <div className={styles.eventFormField}>
+                                <label htmlFor="event-date">Date</label>
+                                <input
+                                type="date"
+                                id="event-date"
+                                value={newEvent.date}
+                                onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+                                required
+                                />
+                                </div>
+                                <div className={styles.eventFormField}>
+                                <label htmlFor="event-type">Type</label>
+                                <select
+                                id="event-type"
+                                value={newEvent.type}
+                                onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
+                                >
+                                <option value="medication">Medication</option>
+                                <option value="procedure">Procedure/Test</option>
+                                <option value="illness">Illness</option>
+                                <option value="lifestyle">Lifestyle Change</option>
+                                <option value="other">Other</option>
+                                </select>
+                                </div>
+                                <div className={styles.eventFormField}>
+                                <label htmlFor="event-title">Title</label>
+                                <input
+                                type="text"
+                                id="event-title"
+                                value={newEvent.title}
+                                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                                placeholder="e.g., Started new medication"
+                                required
+                                />
+                                </div>
+                                <div className={styles.eventFormField}>
+                                <label htmlFor="event-description">Description (optional)</label>
+                                <textarea
+                                id="event-description"
+                                value={newEvent.description}
+                                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                                placeholder="Additional details..."
+                                rows={3}
+                                />
+                                </div>
+                                <div className={styles.eventFormActions}>
+                                <button
+                                type="button"
+                                className={styles.eventFormCancel}
+                                onClick={() => setShowAddEvent(false)}
+                                >
+                                Cancel
+                                </button>
+                                <button type="submit" className={styles.eventFormSubmit}>
+                                Add Event
+                                </button>
+                                </div>
+                                </form>
+                                </div>
+                                </div>
+                                )}
               
-              return (
-                <ReferenceLine
-                  key={`event-${event.id}`}
-                  x={closestDataPoint.date}
-                  stroke={eventTypeColors[event.type]}
-                  strokeWidth={2}
-                  opacity={0.7}
-                  label={{
-                    value: "⚑",
-                    position: 'top',
-                    fill: eventTypeColors[event.type],
-                    fontSize: 16
-                  }}
-                />
-              );
-            })}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      {/* Health Events Section */}
-      <div className={styles.healthEventsSection}>
-        <h3 className={styles.healthEventsTitle}>Health Events</h3>
-        
-        <div className={styles.healthEventsList}>
-          {filteredHealthEvents.length > 0 ? (
-            filteredHealthEvents.map(event => (
-              <div key={event.id} className={styles.healthEventCard} style={{ borderLeftColor: eventTypeColors[event.type] }}>
-                <div className={styles.healthEventHeader}>
-                  <span className={styles.healthEventDate}>{formatDate(event.date)}</span>
-                  <span className={styles.healthEventType} style={{ backgroundColor: eventTypeColors[event.type] }}>
-                    {event.type}
-                  </span>
-                </div>
-                <div className={styles.healthEventTitle}>{event.title}</div>
-                {event.description && (
-                  <div className={styles.healthEventDescription}>{event.description}</div>
-                )}
-                <button
-                  className={styles.healthEventDelete}
-                  onClick={() => setHealthEvents(healthEvents.filter(e => e.id !== event.id))}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className={styles.healthEventsEmpty}>
-              <Info size={18} />
-              <span>No health events in the selected time period</span>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Add Event Modal */}
-      {showAddEvent && (
-        <div className={styles.eventModalOverlay}>
-          <div className={styles.eventModal}>
-            <div className={styles.eventModalHeader}>
-              <h3>Add Health Event</h3>
-              <button
-                className={styles.eventModalClose}
-                onClick={() => setShowAddEvent(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleEventSubmit} className={styles.eventForm}>
-              <div className={styles.eventFormField}>
-                <label htmlFor="event-date">Date</label>
-                <input
-                  type="date"
-                  id="event-date"
-                  value={newEvent.date}
-                  onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
-                  required
-                />
-              </div>
-              <div className={styles.eventFormField}>
-                <label htmlFor="event-type">Type</label>
-                <select
-                  id="event-type"
-                  value={newEvent.type}
-                  onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
-                >
-                  <option value="medication">Medication</option>
-                  <option value="procedure">Procedure/Test</option>
-                  <option value="illness">Illness</option>
-                  <option value="lifestyle">Lifestyle Change</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className={styles.eventFormField}>
-                <label htmlFor="event-title">Title</label>
-                <input
-                  type="text"
-                  id="event-title"
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                  placeholder="e.g., Started new medication"
-                  required
-                />
-              </div>
-              <div className={styles.eventFormField}>
-                <label htmlFor="event-description">Description (optional)</label>
-                <textarea
-                  id="event-description"
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                  placeholder="Additional details..."
-                  rows={3}
-                />
-              </div>
-              <div className={styles.eventFormActions}>
-                <button
-                  type="button"
-                  className={styles.eventFormCancel}
-                  onClick={() => setShowAddEvent(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className={styles.eventFormSubmit}>
-                  Add Event
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      
-      <div className={styles.timelineLegend}>
-        <div className={styles.legendItem}>
-          <div className={`${styles.legendMarker} ${styles.normal}`}></div>
-          <div className={styles.legendText}>Normal Value</div>
-        </div>
-        <div className={styles.legendItem}>
-          <div className={`${styles.legendMarker} ${styles.high}`}></div>
-          <div className={styles.legendText}>High Value</div>
-        </div>
-        <div className={styles.legendItem}>
-          <div className={`${styles.legendMarker} ${styles.low}`}></div>
-          <div className={styles.legendText}>Low Value</div>
-        </div>
-        <div className={styles.legendItem}>
-          <div className={styles.legendLine}></div>
-          <div className={styles.legendText}>Reference Range</div>
-        </div>
-        {filteredHealthEvents.length > 0 && (
-          <div className={styles.legendItem}>
-            <div className={styles.legendFlag}>⚑</div>
-            <div className={styles.legendText}>Health Event</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+              <div className={styles.timelineLegend}>
+              <div className={styles.legendItem}>
+              <div className={`${styles.legendMarker} ${styles.normal}`}></div>
+              <div className={styles.legendText}>Normal
+              
+              
+              Value</div>
+                     </div>
+                     <div className={styles.legendItem}>
+                       <div className={`${styles.legendMarker} ${styles.high}`}></div>
+                       <div className={styles.legendText}>High Value</div>
+                     </div>
+                     <div className={styles.legendItem}>
+                       <div className={`${styles.legendMarker} ${styles.low}`}></div>
+                       <div className={styles.legendText}>Low Value</div>
+                     </div>
+                     <div className={styles.legendItem}>
+                       <div className={styles.legendLine}></div>
+                       <div className={styles.legendText}>Reference Range</div>
+                     </div>
+                     {filteredHealthEvents.length > 0 && (
+                       <div className={styles.legendItem}>
+                         <div className={styles.legendFlag}>⚑</div>
+                         <div className={styles.legendText}>Health Event</div>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               );
+              };
 
-export default HealthTimeline;
+              export default HealthTimeline;
