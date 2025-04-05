@@ -698,7 +698,7 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.tooltipDate) {
+.tooltipDate {
   font-weight: 600;
   margin-bottom: 6px;
   color: #1f2937;
@@ -706,13 +706,13 @@
   padding-bottom: 4px;
 }
 
-.tooltipParameters) {
+.tooltipParameters {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.tooltip-parameter) {
+.tooltip-parameter {
   font-size: 14px;
   display: flex;
   justify-content: space-between;
