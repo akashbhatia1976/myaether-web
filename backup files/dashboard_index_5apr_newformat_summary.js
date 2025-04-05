@@ -1,5 +1,5 @@
 // pages/dashboard/index.js
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import styles from "../../styles/dashboard.module.css";
@@ -7,8 +7,7 @@ import {
   getUserDetails,
   getReports,
   searchReportsWithNLP,
-  axiosInstance,
-  formatReportsForTimeline
+  axiosInstance
 } from "../../utils/apiService";
 import SearchResultsVisualization from "../../components/SearchResultsVisualization";
 // Import Health Timeline and Dashboard Summary components
@@ -360,11 +359,93 @@ export default function Dashboard() {
     });
   };
 
+  // Function to format reports data for the Health Timeline
+    // Function to format reports data for the Health Timeline
+    const formatReportsForTimeline = () => {
+      if (!reports || reports.length === 0) return [];
+      
+      // Create a standardized format for the timeline component
+      const formattedReports = [];
+      
+      // Process each report
+      reports.forEach(report => {
+        const reportId = report._id || report.reportId;
+        
+        // Get extracted parameters from the report
+        const extractedParameters = report.extractedParameters;
+        
+        if (!extractedParameters || extractedParameters.length === 0) return; // Skip if no parameters available
+        
+        // Format the parameters
+        const formattedParams = [];
+        
+        extractedParameters.forEach(param => {
+          // Skip if no value, name, or invalid value
+          if (!param.name || !param.value) return;
+          
+          // Get the numeric value (handle MongoDB specific formats)
+          let numValue;
+          if (typeof param.value === 'object') {
+            // Handle MongoDB number formats ($numberDouble, $numberInt, etc.)
+            if (param.value.$numberDouble) {
+              numValue = parseFloat(param.value.$numberDouble);
+            } else if (param.value.$numberInt) {
+              numValue = parseInt(param.value.$numberInt);
+            } else if (param.value.$numberLong) {
+              numValue = parseInt(param.value.$numberLong);
+            } else {
+              // Try to parse the value if it's a string
+              const parsedValue = parseFloat(String(param.value).replace(/[^\d.-]/g, ''));
+              if (!isNaN(parsedValue)) {
+                numValue = parsedValue;
+              }
+            }
+          } else if (typeof param.value === 'number') {
+            // Direct numeric value
+            numValue = param.value;
+          } else if (typeof param.value === 'string') {
+            // Try to parse string values
+            const parsedValue = parseFloat(param.value.replace(/[^\d.-]/g, ''));
+            if (!isNaN(parsedValue)) {
+              numValue = parsedValue;
+            }
+          }
+          
+          // Only add if we have a valid numeric value
+          if (numValue !== undefined && !isNaN(numValue)) {
+            formattedParams.push({
+              id: param.name.toLowerCase().replace(/\s+/g, '_'), // Create ID from name
+              name: param.name,
+              value: numValue,
+              unit: param.unit || '',
+              category: param.category || 'General',
+              normalRange: param.referenceRange || ''
+            });
+          }
+        });
+        
+        // Only add reports with valid parameters
+        if (formattedParams.length > 0) {
+          formattedReports.push({
+            id: reportId,
+            date: report.date,
+            name: report.name || report.fileName || "Unnamed Report",
+            parameters: formattedParams
+          });
+        }
+      });
+      
+      // Sort reports by date (newest to oldest)
+      formattedReports.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      return formattedReports;
+    };
+
   if (loading) return <div className={styles.loading}>Loading dashboard...</div>;
   if (!userData) return <div className={styles.error}>⚠️ Unable to load user</div>;
 
-  // Format the reports for the timeline - using our utility function
-  const timelineReports = formatReportsForTimeline(reports);
+  // Format the reports for the timeline
+  const timelineReports = formatReportsForTimeline();
 
   return (
     <div className={styles.container}>

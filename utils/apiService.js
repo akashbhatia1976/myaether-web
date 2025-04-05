@@ -269,27 +269,237 @@ const revokeSharedReport = async (payload) => {
  * @returns {Promise<Array>} - Search results matching the query
  */
 const searchReportsWithNLP = async (userId, query) => {
-    if (!userId) {
-      throw new Error("User ID is required for search");
+  if (!userId) {
+    throw new Error("User ID is required for search");
+  }
+  
+  if (!query || !query.trim()) {
+    throw new Error("Search query cannot be empty");
+  }
+  
+  try {
+    // Change 'query' to 'queryText' to match backend expectation
+    const response = await axiosInstance.post('/search/nlp', {
+      userId,
+      queryText: query.trim()  // Changed from 'query' to 'queryText'
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error(`❌ NLP search failed:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get parameters for a specific report
+ * This is a client-side implementation since there's no direct endpoint
+ * @param {string} userId - The user ID
+ * @param {string} reportId - The report ID
+ * @returns {Promise<Array>} - Array of parameters
+ */
+const getReportParameters = async (userId, reportId) => {
+  if (!userId || !reportId) {
+    throw new Error("User ID and Report ID are required");
+  }
+  
+  try {
+    // First, get all reports for user
+    const reports = await getReports(userId);
+    
+    // Find the specific report
+    const report = reports.find(r => (r._id === reportId || r.reportId === reportId));
+    
+    if (!report) {
+      console.error(`Report ${reportId} not found for user ${userId}`);
+      return [];
     }
     
-    if (!query || !query.trim()) {
-      throw new Error("Search query cannot be empty");
-    }
+    // Extract parameters
+    return report.extractedParameters || [];
+  } catch (error) {
+    console.error(`❌ Error getting parameters for report ${reportId}:`, error.message);
+    return [];
+  }
+};
+
+/**
+ * Count shared reports for a user
+ * @param {string} userId - The user ID
+ * @returns {Promise<number>} - Count of shared reports
+ */
+const countSharedReports = async (userId) => {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+  
+  try {
+    // Get reports shared by this user
+    const sharedReports = await getSharedReportsByUser(userId);
+    return sharedReports.length || 0;
+  } catch (error) {
+    console.error(`❌ Error counting shared reports for user ${userId}:`, error.message);
+    return 0;
+  }
+};
+
+/**
+ * Extract numeric value from MongoDB formatted values
+ * @param {any} value - Value to extract number from
+ * @returns {number|null} - Extracted number or null
+ */
+const extractNumericValue = (value) => {
+  if (value === null || value === undefined) return null;
+  
+  // Handle MongoDB number formats
+  if (typeof value === 'object') {
+    if (value.$numberDouble) return parseFloat(value.$numberDouble);
+    if (value.$numberInt) return parseInt(value.$numberInt);
+    if (value.$numberLong) return parseInt(value.$numberLong);
+  }
+  
+  // Handle direct numeric values
+  if (typeof value === 'number') return value;
+  
+  // Try to parse string values
+  if (typeof value === 'string') {
+    const parsedValue = parseFloat(value.replace(/[^\d.-]/g, ''));
+    if (!isNaN(parsedValue)) return parsedValue;
+  }
+  
+  return null;
+};
+
+/**
+ * Parse reference range string into min and max values
+ * @param {string} rangeString - Reference range string
+ * @returns {Array} - [min, max] values
+ */
+const parseReferenceRange = (rangeString) => {
+  if (!rangeString || typeof rangeString !== 'string') return [null, null];
+  
+  // Handle common reference range formats
+  const dashMatch = rangeString.match(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/);
+  if (dashMatch) {
+    return [parseFloat(dashMatch[1]), parseFloat(dashMatch[2])];
+  }
+  
+  // Handle "Normal: Above X" format
+  const aboveMatch = rangeString.match(/above\s+(\d+\.?\d*)/i);
+  if (aboveMatch) {
+    return [parseFloat(aboveMatch[1]), Infinity];
+  }
+  
+  // Handle "Normal: Below X" format
+  const belowMatch = rangeString.match(/below\s+(\d+\.?\d*)/i);
+  if (belowMatch) {
+    return [0, parseFloat(belowMatch[1])];
+  }
+  
+  return [null, null];
+};
+
+/**
+ * Check if a value is abnormal based on its reference range
+ * @param {any} value - Value to check
+ * @param {string} referenceRange - Reference range string
+ * @returns {boolean} - True if abnormal, false otherwise
+ */
+const isAbnormalValue = (value, referenceRange) => {
+  const numValue = extractNumericValue(value);
+  if (numValue === null) return false;
+  
+  const [min, max] = parseReferenceRange(referenceRange);
+  if (min === null || max === null) return false;
+  
+  return numValue < min || numValue > max;
+};
+
+/**
+ * Count abnormal parameters in an array of reports
+ * @param {Array} reports - Array of report objects
+ * @returns {number} - Count of abnormal parameters
+ */
+const countAbnormalParameters = (reports) => {
+  if (!reports || !Array.isArray(reports)) return 0;
+  
+  let abnormalCount = 0;
+  
+  reports.forEach(report => {
+    if (!report.extractedParameters || !Array.isArray(report.extractedParameters)) return;
     
-    try {
-      // Change 'query' to 'queryText' to match backend expectation
-      const response = await axiosInstance.post('/search/nlp', {
-        userId,
-        queryText: query.trim()  // Changed from 'query' to 'queryText'
-      });
+    report.extractedParameters.forEach(param => {
+      if (!param.value || !param.referenceRange) return;
       
-      return response.data;
-    } catch (error) {
-      console.error(`❌ NLP search failed:`, error.message);
-      throw error;
+      if (isAbnormalValue(param.value, param.referenceRange)) {
+        abnormalCount++;
+      }
+    });
+  });
+  
+  return abnormalCount;
+};
+
+/**
+ * Format reports data for the timeline
+ * @param {Array} reports - Array of report objects
+ * @returns {Array} - Formatted reports for timeline
+ */
+const formatReportsForTimeline = (reports) => {
+  if (!reports || !Array.isArray(reports) || reports.length === 0) return [];
+  
+  // Create a standardized format for the timeline component
+  const formattedReports = [];
+  
+  // Process each report
+  reports.forEach(report => {
+    const reportId = report._id || report.reportId;
+    
+    // Get extracted parameters from the report
+    const extractedParameters = report.extractedParameters;
+    
+    if (!extractedParameters || !Array.isArray(extractedParameters) || extractedParameters.length === 0) return; // Skip if no parameters available
+    
+    // Format the parameters
+    const formattedParams = [];
+    
+    extractedParameters.forEach(param => {
+      // Skip if no value, name, or invalid value
+      if (!param.name || !param.value) return;
+      
+      // Get the numeric value
+      const numValue = extractNumericValue(param.value);
+      
+      // Only add if we have a valid numeric value
+      if (numValue !== undefined && !isNaN(numValue)) {
+        formattedParams.push({
+          id: param.name.toLowerCase().replace(/\s+/g, '_'), // Create ID from name
+          name: param.name,
+          value: numValue,
+          unit: param.unit || '',
+          category: param.category || 'General',
+          normalRange: param.referenceRange || ''
+        });
+      }
+    });
+    
+    // Only add reports with valid parameters
+    if (formattedParams.length > 0) {
+      formattedReports.push({
+        id: reportId,
+        date: report.date,
+        name: report.name || report.fileName || "Unnamed Report",
+        parameters: formattedParams
+      });
     }
-  };
+  });
+  
+  // Sort reports by date (newest to oldest)
+  formattedReports.sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  return formattedReports;
+};
+
 // Keep the original fetchWithTimeout for any legacy code that might use it directly
 const fetchWithTimeout = async (url, options = {}) => {
   console.warn("⚠️ fetchWithTimeout is deprecated. Please use Axios methods directly.");
@@ -339,7 +549,15 @@ export {
   getSharedReportsByUser,
   getReportsSharedWithUser,
   revokeSharedReport,
-  searchReportsWithNLP, // Added to centralized exports
+  searchReportsWithNLP,
+  // New utilities for real data
+  getReportParameters,
+  countSharedReports,
+  extractNumericValue,
+  parseReferenceRange,
+  isAbnormalValue,
+  countAbnormalParameters,
+  formatReportsForTimeline,
   // Export axios instance in case it's needed elsewhere
   axiosInstance
 };

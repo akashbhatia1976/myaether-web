@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import styles from '../styles/dashboard.module.css';
+import {
+  countSharedReports,
+  countAbnormalParameters,
+  extractNumericValue,
+  parseReferenceRange,
+  isAbnormalValue
+} from '../utils/apiService';
 
 const DashboardSummary = ({ reports, userData }) => {
   const [summaryMetrics, setSummaryMetrics] = useState({
@@ -17,71 +24,98 @@ const DashboardSummary = ({ reports, userData }) => {
   
   // Calculate summary metrics when reports change
   useEffect(() => {
-    if (!reports || reports.length === 0) return;
+    if (!reports || reports.length === 0 || !userData) return;
     
-    // Calculate total reports
-    const totalReports = reports.length;
-    
-    // Calculate recent reports (last month)
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-    
-    const recentReports = reports.filter(report => {
-      const reportDate = new Date(report.date);
-      return reportDate >= oneMonthAgo;
-    }).length;
-    
-    // Calculate shared reports
-    // In a real implementation, this would count actually shared reports
-    const sharedReports = Math.min(Math.floor(totalReports * 0.3), totalReports);
-    
-    // Count abnormal parameters across all reports
-    let abnormalCount = 0;
-    reports.forEach(report => {
-      if (report.results) {
-        const abnormalResults = report.results.filter(result =>
-          result.status === 'high' || result.status === 'low' || result.status === 'abnormal'
-        );
-        abnormalCount += abnormalResults.length;
+    const calculateMetrics = async () => {
+      // Calculate total reports
+      const totalReports = reports.length;
+      
+      // Calculate recent reports (last month)
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
+      const recentReports = reports.filter(report => {
+        const reportDate = new Date(report.date);
+        return reportDate >= oneMonthAgo;
+      }).length;
+      
+      // Count abnormal parameters
+      const abnormalValues = countAbnormalParameters(reports);
+      
+      // Analyze parameter trends
+      const trendingParameters = analyzeParameterTrends(reports);
+      
+      // Update metrics that we can calculate immediately
+      setSummaryMetrics({
+        totalReports,
+        recentReports,
+        sharedReports: 0, // Will be updated asynchronously
+        abnormalValues,
+        trendingParameters
+      });
+      
+      // Get shared reports count asynchronously
+      try {
+        const sharedCount = await countSharedReports(userData.userId);
+        setSummaryMetrics(prev => ({
+          ...prev,
+          sharedReports: sharedCount
+        }));
+      } catch (error) {
+        console.error("Failed to get shared reports count:", error);
       }
-    });
+    };
     
-    // Analyze trends for parameters that appear in multiple reports
-    // This is a simplified version - a real implementation would do more sophisticated trend analysis
-    const parameterTrends = analyzeParameterTrends(reports);
-    
-    setSummaryMetrics({
-      totalReports,
-      recentReports,
-      sharedReports,
-      abnormalValues: abnormalCount,
-      trendingParameters: parameterTrends
-    });
-  }, [reports]);
+    calculateMetrics();
+  }, [reports, userData]);
   
   // Analyze parameter trends across reports
   const analyzeParameterTrends = (reports) => {
-    // Group reports by parameter name
-    const parameterMap = {};
+    if (!reports || !Array.isArray(reports)) {
+      return { improving: 0, worsening: 0, stable: 0 };
+    }
     
-    // Sort reports by date (oldest first)
+    // Group reports by date (oldest first)
     const sortedReports = [...reports].sort((a, b) =>
       new Date(a.date) - new Date(b.date)
     );
     
-    // Collect parameter values across reports
+    // Create a map of parameters grouped by name
+    const parameterMap = {};
+    
+    // Process each report's parameters
     sortedReports.forEach(report => {
-      if (!report.results) return;
+      if (!report.extractedParameters || !Array.isArray(report.extractedParameters)) return;
       
-      report.results.forEach(result => {
-        if (!parameterMap[result.name]) {
-          parameterMap[result.name] = [];
+      report.extractedParameters.forEach(param => {
+        const paramName = param.name;
+        if (!paramName) return;
+        
+        // Skip if missing essential data
+        if (!param.value || !param.referenceRange) return;
+        
+        // Extract numeric value and reference range
+        const value = extractNumericValue(param.value);
+        const [minRange, maxRange] = parseReferenceRange(param.referenceRange);
+        
+        if (value === null || minRange === null || maxRange === null) return;
+        
+        // Determine status (high, low, normal)
+        let status = 'normal';
+        if (value < minRange) status = 'low';
+        else if (value > maxRange) status = 'high';
+        
+        // Add to parameter map
+        if (!parameterMap[paramName]) {
+          parameterMap[paramName] = [];
         }
         
-        parameterMap[result.name].push({
+        parameterMap[paramName].push({
           date: report.date,
-          value: result.value,
-          status: result.status
+          value,
+          minRange,
+          maxRange,
+          status
         });
       });
     });
