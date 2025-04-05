@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import styles from '../styles/dashboard.module.css';
 
 const DashboardSummary = ({ reports, userData }) => {
   const [summaryMetrics, setSummaryMetrics] = useState({
@@ -30,7 +31,7 @@ const DashboardSummary = ({ reports, userData }) => {
       return reportDate >= oneMonthAgo;
     }).length;
     
-    // Calculate shared reports 
+    // Calculate shared reports
     // In a real implementation, this would count actually shared reports
     const sharedReports = Math.min(Math.floor(totalReports * 0.3), totalReports);
     
@@ -38,7 +39,7 @@ const DashboardSummary = ({ reports, userData }) => {
     let abnormalCount = 0;
     reports.forEach(report => {
       if (report.results) {
-        const abnormalResults = report.results.filter(result => 
+        const abnormalResults = report.results.filter(result =>
           result.status === 'high' || result.status === 'low' || result.status === 'abnormal'
         );
         abnormalCount += abnormalResults.length;
@@ -64,7 +65,7 @@ const DashboardSummary = ({ reports, userData }) => {
     const parameterMap = {};
     
     // Sort reports by date (oldest first)
-    const sortedReports = [...reports].sort((a, b) => 
+    const sortedReports = [...reports].sort((a, b) =>
       new Date(a.date) - new Date(b.date)
     );
     
@@ -105,7 +106,7 @@ const DashboardSummary = ({ reports, userData }) => {
           improving++;
         } else if (firstValue.status === 'normal' && (lastValue.status === 'high' || lastValue.status === 'low')) {
           worsening++;
-        } else if ((firstValue.status === 'high' || firstValue.status === 'low') && 
+        } else if ((firstValue.status === 'high' || firstValue.status === 'low') &&
                   (lastValue.status === 'high' || lastValue.status === 'low')) {
           // Check for significant change in value
           const percentChange = Math.abs((lastValue.value - firstValue.value) / firstValue.value) * 100;
@@ -131,9 +132,9 @@ const DashboardSummary = ({ reports, userData }) => {
   };
 
   return (
-    <div className="dashboard-summary">
-      <div className="summary-card">
-        <div className="summary-icon total-icon">
+    <div className={styles.dashboardSummary}>
+      <div className={styles.summaryCard}>
+        <div className={`${styles.summaryIcon} ${styles.totalIcon}`}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -142,65 +143,65 @@ const DashboardSummary = ({ reports, userData }) => {
             <polyline points="10 9 9 9 8 9"></polyline>
           </svg>
         </div>
-        <div className="summary-content">
-          <div className="summary-value">{summaryMetrics.totalReports}</div>
-          <div className="summary-label">Total Reports</div>
+        <div className={styles.summaryContent}>
+          <div className={styles.summaryValue}>{summaryMetrics.totalReports}</div>
+          <div className={styles.summaryLabel}>Total Reports</div>
         </div>
       </div>
 
-      <div className="summary-card">
-        <div className="summary-icon recent-icon">
+      <div className={styles.summaryCard}>
+        <div className={`${styles.summaryIcon} ${styles.recentIcon}`}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
           </svg>
         </div>
-        <div className="summary-content">
-          <div className="summary-value">{summaryMetrics.recentReports}</div>
-          <div className="summary-label">Recent Reports</div>
+        <div className={styles.summaryContent}>
+          <div className={styles.summaryValue}>{summaryMetrics.recentReports}</div>
+          <div className={styles.summaryLabel}>Recent Reports</div>
         </div>
       </div>
 
-      <div className="summary-card">
-        <div className="summary-icon abnormal-icon">
+      <div className={styles.summaryCard}>
+        <div className={`${styles.summaryIcon} ${styles.abnormalIcon}`}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
         </div>
-        <div className="summary-content">
-          <div className="summary-value">{summaryMetrics.abnormalValues}</div>
-          <div className="summary-label">Abnormal Values</div>
+        <div className={styles.summaryContent}>
+          <div className={styles.summaryValue}>{summaryMetrics.abnormalValues}</div>
+          <div className={styles.summaryLabel}>Abnormal Values</div>
         </div>
       </div>
 
-      <div className="summary-card trends-card">
-        <div className="summary-icon trends-icon">
+      <div className={`${styles.summaryCard} ${styles.trendsCard}`}>
+        <div className={`${styles.summaryIcon} ${styles.trendsIcon}`}>
           <TrendingUp size={24} />
         </div>
-        <div className="summary-content">
-          <div className="trends-summary">
-            <div className="trend-item">
-              <div className="trend-icon improving">
+        <div className={styles.summaryContent}>
+          <div className={styles.trendsSummary}>
+            <div className={styles.trendItem}>
+              <div className={`${styles.trendIcon} ${styles.improving}`}>
                 <TrendingUp size={16} />
               </div>
-              <div className="trend-count">{summaryMetrics.trendingParameters.improving}</div>
+              <div className={styles.trendCount}>{summaryMetrics.trendingParameters.improving}</div>
             </div>
-            <div className="trend-item">
-              <div className="trend-icon worsening">
+            <div className={styles.trendItem}>
+              <div className={`${styles.trendIcon} ${styles.worsening}`}>
                 <TrendingDown size={16} />
               </div>
-              <div className="trend-count">{summaryMetrics.trendingParameters.worsening}</div>
+              <div className={styles.trendCount}>{summaryMetrics.trendingParameters.worsening}</div>
             </div>
-            <div className="trend-item">
-              <div className="trend-icon stable">
+            <div className={styles.trendItem}>
+              <div className={`${styles.trendIcon} ${styles.stable}`}>
                 <Minus size={16} />
               </div>
-              <div className="trend-count">{summaryMetrics.trendingParameters.stable}</div>
+              <div className={styles.trendCount}>{summaryMetrics.trendingParameters.stable}</div>
             </div>
           </div>
-          <div className="summary-label">Parameter Trends</div>
+          <div className={styles.summaryLabel}>Parameter Trends</div>
         </div>
       </div>
     </div>
