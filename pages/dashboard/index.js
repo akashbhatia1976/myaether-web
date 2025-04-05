@@ -126,6 +126,63 @@ export default function Dashboard() {
     
     fetchParameters();
   }, [reports]);
+    
+    // This goes right after your existing useEffect for fetching parameters
+
+    // Add this test function
+    const testParameterFetching = async () => {
+      if (!reports.length || !userData) return;
+      
+      const reportId = reports[0]._id;
+      console.log("Testing parameter fetching for report:", reportId);
+      
+      // Approach 1: Direct parameters endpoint
+      try {
+        const response = await axiosInstance.get(`/parameters/${reportId}`);
+        console.log("Parameters endpoint:",
+                   response.data ? "Data returned" : "No data");
+        console.log("Response preview:",
+                   JSON.stringify(response.data).substring(0, 200));
+      } catch (error) {
+        console.error("Parameters endpoint failed:", error.message);
+      }
+      
+      // Approach 2: Detailed report endpoint
+      try {
+        const response = await axiosInstance.get(`/reports/${userData.userId}/${reportId}`);
+        console.log("Detailed report:",
+                   response.data ? "Data returned" : "No data");
+        console.log("Has extractedParameters:",
+                   !!response.data.extractedParameters);
+        
+        // Check for other possible field names
+        const possibleFields = [
+          'extractedParameters', 'parameters', 'testResults',
+          'tests', 'results', 'values', 'data'
+        ];
+        
+        for (const field of possibleFields) {
+          if (response.data[field]) {
+            console.log(`Found data in field: ${field}`);
+            console.log("Preview:",
+                       JSON.stringify(response.data[field]).substring(0, 200));
+          }
+        }
+      } catch (error) {
+        console.error("Detailed report endpoint failed:", error.message);
+      }
+    };
+
+    // And add this useEffect to call it
+    useEffect(() => {
+      if (reports.length > 0 && userData) {
+        testParameterFetching();
+      }
+    }, [reports, userData]);
+
+    // Then continue with your other functions (handleLogout, etc.)
+    
+    
 
   const handleLogout = () => {
     // Clear localStorage
