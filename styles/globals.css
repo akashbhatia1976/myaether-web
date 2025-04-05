@@ -16,3 +16,20 @@ body {
   margin: 0 auto;
   padding: 0 1rem;
 }
+
+/* Icon size fixes */
+.lucide {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+/* For very specific cases where icons might need to be a different size */
+.lucide-small {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.lucide-large {
+  width: 32px !important;
+  height: 32px !important;
+}
