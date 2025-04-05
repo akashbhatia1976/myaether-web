@@ -579,3 +579,224 @@
     transform: translateY(0);
   }
 }
+
+
+/* Add these styles to your dashboard.module.css or create a new file */
+
+/* Health Timeline Container */
+.health-timeline {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Timeline Header */
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.timeline-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+}
+
+.time-range-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.timeline-range-button {
+  background-color: #f3f4f6;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeline-range-button:hover {
+  background-color: #e5e7eb;
+}
+
+.timeline-range-button-active {
+  background-color: #0d9488;
+  color: white;
+}
+
+/* Parameter Selection */
+.parameter-selection {
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.parameter-selection-label {
+  font-weight: 500;
+  color: #4b5563;
+  margin-right: 8px;
+}
+
+.parameter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.parameter-button {
+  background-color: #f9fafb;
+  border: 2px solid transparent;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.parameter-button:hover {
+  background-color: #f3f4f6;
+}
+
+.parameter-button-active {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+/* Timeline Chart */
+.timeline-chart-container {
+  margin-bottom: 16px;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #fcfcfc;
+}
+
+/* Custom Tooltip */
+:global(.custom-tooltip) {
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+:global(.tooltip-date) {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #1f2937;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+:global(.tooltip-parameters) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+:global(.tooltip-parameter) {
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Timeline Legend */
+.timeline-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-marker.normal {
+  border: 2px solid #0d9488;
+  background-color: white;
+}
+
+.legend-marker.high {
+  background-color: #ef4444;
+}
+
+.legend-marker.low {
+  background-color: #3b82f6;
+}
+
+.legend-line {
+  width: 20px;
+  height: 0;
+  border-top: 2px dashed #9ca3af;
+}
+
+.legend-text {
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.timeline-loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .timeline-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .timeline-controls {
+    width: 100%;
+  }
+  
+  .time-range-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .parameter-selection {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .parameter-buttons {
+    width: 100%;
+  }
+}
+
+.timelineSection {
+  margin-bottom: 24px;
+}

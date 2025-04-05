@@ -10,9 +10,6 @@ import {
   axiosInstance
 } from "../../utils/apiService";
 import SearchResultsVisualization from "../../components/SearchResultsVisualization";
-// Import Health Timeline and Dashboard Summary components
-import HealthTimeline from "../../components/HealthTimeline";
-import DashboardSummary from "../../components/DashboardSummary";
 
 // Add server-side authentication check
 export async function getServerSideProps(context) {
@@ -130,61 +127,63 @@ export default function Dashboard() {
     fetchParameters();
   }, [reports]);
     
-  // This goes right after your existing useEffect for fetching parameters
+    // This goes right after your existing useEffect for fetching parameters
 
-  // Add this test function
-  const testParameterFetching = async () => {
-    if (!reports.length || !userData) return;
-    
-    const reportId = reports[0]._id;
-    console.log("Testing parameter fetching for report:", reportId);
-    
-    // Approach 1: Direct parameters endpoint
-    try {
-      const response = await axiosInstance.get(`/parameters/${reportId}`);
-      console.log("Parameters endpoint:",
-                 response.data ? "Data returned" : "No data");
-      console.log("Response preview:",
-                 JSON.stringify(response.data).substring(0, 200));
-    } catch (error) {
-      console.error("Parameters endpoint failed:", error.message);
-    }
-    
-    // Approach 2: Detailed report endpoint
-    try {
-      const response = await axiosInstance.get(`/reports/${userData.userId}/${reportId}`);
-      console.log("Detailed report:",
-                 response.data ? "Data returned" : "No data");
-      console.log("Has extractedParameters:",
-                 !!response.data.extractedParameters);
+    // Add this test function
+    const testParameterFetching = async () => {
+      if (!reports.length || !userData) return;
       
-      // Check for other possible field names
-      const possibleFields = [
-        'extractedParameters', 'parameters', 'testResults',
-        'tests', 'results', 'values', 'data'
-      ];
+      const reportId = reports[0]._id;
+      console.log("Testing parameter fetching for report:", reportId);
       
-      for (const field of possibleFields) {
-        if (response.data[field]) {
-          console.log(`Found data in field: ${field}`);
-          console.log("Preview:",
-                     JSON.stringify(response.data[field]).substring(0, 200));
-        }
+      // Approach 1: Direct parameters endpoint
+      try {
+        const response = await axiosInstance.get(`/parameters/${reportId}`);
+        console.log("Parameters endpoint:",
+                   response.data ? "Data returned" : "No data");
+        console.log("Response preview:",
+                   JSON.stringify(response.data).substring(0, 200));
+      } catch (error) {
+        console.error("Parameters endpoint failed:", error.message);
       }
-    } catch (error) {
-      console.error("Detailed report endpoint failed:", error.message);
-    }
-  };
+      
+      // Approach 2: Detailed report endpoint
+      try {
+        const response = await axiosInstance.get(`/reports/${userData.userId}/${reportId}`);
+        console.log("Detailed report:",
+                   response.data ? "Data returned" : "No data");
+        console.log("Has extractedParameters:",
+                   !!response.data.extractedParameters);
+        
+        // Check for other possible field names
+        const possibleFields = [
+          'extractedParameters', 'parameters', 'testResults',
+          'tests', 'results', 'values', 'data'
+        ];
+        
+        for (const field of possibleFields) {
+          if (response.data[field]) {
+            console.log(`Found data in field: ${field}`);
+            console.log("Preview:",
+                       JSON.stringify(response.data[field]).substring(0, 200));
+          }
+        }
+      } catch (error) {
+        console.error("Detailed report endpoint failed:", error.message);
+      }
+    };
 
-  // And add this useEffect to call it
-  useEffect(() => {
-    if (reports.length > 0 && userData) {
-      testParameterFetching();
-    }
-  }, [reports, userData]);
+    // And add this useEffect to call it
+    useEffect(() => {
+      if (reports.length > 0 && userData) {
+        testParameterFetching();
+      }
+    }, [reports, userData]);
 
-  // Then continue with your other functions (handleLogout, etc.)
-  
+    // Then continue with your other functions (handleLogout, etc.)
+    
+    
+
   const handleLogout = () => {
     // Clear localStorage
     localStorage.removeItem("token");
@@ -359,125 +358,8 @@ export default function Dashboard() {
     });
   };
 
-  // Function to format reports data for the Health Timeline
-  const formatReportsForTimeline = () => {
-    // Create a standardized format for the timeline component
-    const formattedReports = [];
-    
-    // Process each report
-    reports.forEach(report => {
-      const reportId = report._id || report.reportId;
-      const parameters = reportParameters[reportId];
-      
-      if (!parameters) return; // Skip if no parameters available
-      
-      // Format the parameters based on their structure
-      const formattedParams = [];
-      
-      // For object of parameters
-      if (typeof parameters === 'object' && !Array.isArray(parameters)) {
-        for (const key in parameters) {
-          if (!parameters.hasOwnProperty(key)) continue;
-          
-          const param = parameters[key];
-          
-          // Handle different parameter value formats
-          let value, unit, normalLow, normalHigh, referenceRange;
-          
-          if (typeof param === 'object') {
-            value = param.Value || param.value;
-            // Skip if no value
-            if (value === undefined || value === null) continue;
-            
-            // Try to convert to number
-            if (typeof value === 'string') {
-              const numValue = parseFloat(value.replace(/[^\d.-]/g, ''));
-              if (!isNaN(numValue)) value = numValue;
-            }
-            
-            unit = param.Unit || param.unit || '';
-            normalLow = param.lowerLimit || param.normalLow || param["Reference Range Low"];
-            normalHigh = param.upperLimit || param.normalHigh || param["Reference Range High"];
-            referenceRange = param.referenceRange || param["Reference Range"] || '';
-          } else {
-            // If param is a primitive value, try to convert to number
-            if (typeof param === 'string') {
-              const numValue = parseFloat(param.replace(/[^\d.-]/g, ''));
-              if (!isNaN(numValue)) value = numValue;
-              else value = param;
-            } else {
-              value = param;
-            }
-            unit = '';
-          }
-          
-          // Only add numeric values
-          if (typeof value === 'number') {
-            formattedParams.push({
-              id: key.toLowerCase().replace(/\s+/g, '_'), // Create ID from name
-              name: key,
-              value,
-              unit,
-              category: 'General',
-              normalRange: normalLow && normalHigh ? `${normalLow}-${normalHigh}` : ''
-            });
-          }
-        }
-      }
-      // For array of parameters
-      else if (Array.isArray(parameters)) {
-        parameters.forEach(param => {
-          if (!param.name && !param.parameter) return;
-          
-          const name = param.name || param.parameter;
-          let value = param.value || param.result;
-          
-          // Skip if no value
-          if (value === undefined || value === null) return;
-          
-          // Try to convert to number
-          if (typeof value === 'string') {
-            const numValue = parseFloat(value.replace(/[^\d.-]/g, ''));
-            if (!isNaN(numValue)) value = numValue;
-          }
-          
-          // Only add numeric values
-          if (typeof value === 'number') {
-            const unit = param.unit || '';
-            const normalLow = param.normalLow || param.lowerLimit;
-            const normalHigh = param.normalHigh || param.upperLimit;
-            
-            formattedParams.push({
-              id: name.toLowerCase().replace(/\s+/g, '_'), // Create ID from name
-              name,
-              value,
-              unit,
-              category: param.category || 'General',
-              normalRange: normalLow && normalHigh ? `${normalLow}-${normalHigh}` : ''
-            });
-          }
-        });
-      }
-      
-      // Only add reports with valid parameters
-      if (formattedParams.length > 0) {
-        formattedReports.push({
-          id: reportId,
-          date: report.date,
-          name: report.name || report.fileName || "Unnamed Report",
-          parameters: formattedParams
-        });
-      }
-    });
-    
-    return formattedReports;
-  };
-
   if (loading) return <div className={styles.loading}>Loading dashboard...</div>;
   if (!userData) return <div className={styles.error}>⚠️ Unable to load user</div>;
-
-  // Format the reports for the timeline
-  const timelineReports = formatReportsForTimeline();
 
   return (
     <div className={styles.container}>
@@ -506,14 +388,6 @@ export default function Dashboard() {
         <section className={styles.welcomeSection}>
           <h2 className={styles.welcomeTitle}>Welcome back, {userData.userId}!</h2>
           <p className={styles.welcomeSubtitle}>Manage and analyze your health reports</p>
-          
-          {/* Dashboard Summary Section - New addition */}
-          <DashboardSummary reports={reports} userData={userData} />
-        </section>
-        
-        {/* Health Timeline Section - New addition */}
-        <section className={styles.timelineSection}>
-          <HealthTimeline reports={timelineReports} userData={userData} />
         </section>
         
         {/* NLP Search Section - New addition */}
