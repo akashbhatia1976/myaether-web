@@ -537,6 +537,28 @@ const fetchWithTimeout = async (url, options = {}) => {
   }
 };
 
+//ReportWithParameters
+export const getReportsWithParameters = async (userId) => {
+  try {
+    console.log(`📡 Request: GET /reports/${userId}/withParameters`);
+    const response = await fetch(`${BASE_URL}/reports/${userId}/withParameters`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`📦 Reports with parameters: ${data.length}`);
+    return data;
+  } catch (error) {
+    console.error('❌ Error fetching reports with parameters:', error);
+    throw error;
+  }
+};
+
 // ✅ Centralized Export (keeping same exports for compatibility)
 export {
   BASE_URL,
@@ -561,6 +583,7 @@ export {
   isAbnormalValue,
   countAbnormalParameters,
   formatReportsForTimeline,
+  getReportsWithParameters,
   // Export axios instance in case it's needed elsewhere
   axiosInstance
 };

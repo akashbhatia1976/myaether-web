@@ -8,7 +8,8 @@ import {
   getReports,
   searchReportsWithNLP,
   axiosInstance,
-  formatReportsForTimeline
+  formatReportsForTimeline,
+getReportsWithParameters
 } from "../../utils/apiService";
 import SearchResultsVisualization from "../../components/SearchResultsVisualization";
 // Import Health Timeline and Dashboard Summary components
@@ -41,6 +42,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [timelineReports, setTimelineReports] = useState([]);
   
   // NLP Search states
   const [queryText, setQueryText] = useState("");
@@ -55,30 +57,45 @@ export default function Dashboard() {
   const [fetchingParameters, setFetchingParameters] = useState(false);
 
   // Fetch user data and reports
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          setLoading(true);
 
-        const user = await getUserDetails();
-        setUserData(user);
+          const user = await getUserDetails();
+          setUserData(user);
 
-        console.log("📡 Calling getReports() with userId:", user.userId);
+          console.log("📡 Calling getReports() with userId:", user.userId);
 
-        const reportsData = await getReports(user.userId);
-        setReports(reportsData);
-        console.log("📦 Reports fetched:", reportsData);
+          // Get regular reports for the report list
+          const reportsData = await getReports(user.userId);
+          setReports(reportsData);
+          console.log("📦 Reports fetched:", reportsData.length);
 
-      } catch (err) {
-        console.error("❌ Error loading dashboard:", err.message);
-        router.replace("/auth/login");
-      } finally {
-        setLoading(false);
-      }
-    };
+          // Get reports with parameters for the timeline
+          try {
+            const timelineReportsData = await getReportsWithParameters(user.userId);
+            console.log("📊 Timeline reports fetched:", timelineReportsData.length);
+            setTimelineReports(timelineReportsData);
+          } catch (timelineError) {
+            // If the new endpoint fails, fall back to existing code
+            console.error("❌ Error fetching timeline reports:", timelineError);
+            console.log("Falling back to using regular reports for timeline");
+            // Your existing fallback approach
+            const formattedReports = formatReportsForTimeline(reportsData);
+            setTimelineReports(formattedReports);
+          }
 
-    fetchData();
-  }, [router]);
+        } catch (err) {
+          console.error("❌ Error loading dashboard:", err.message);
+          router.replace("/auth/login");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchData();
+    }, [router]);
 
   // Fetch parameters for reports
   useEffect(() => {
@@ -365,8 +382,8 @@ export default function Dashboard() {
   if (!userData) return <div className={styles.error}>⚠️ Unable to load user</div>;
 
   // Format the reports for the timeline - using our utility function
-  const timelineReports = formatReportsForTimeline(reports);
-  console.log("Reports for timeline:", timelineReports.length);
+ // const timelineReports = formatReportsForTimeline(reports);
+ // console.log("Reports for timeline:", timelineReports.length);
 
   return (
     <div className={styles.container}>

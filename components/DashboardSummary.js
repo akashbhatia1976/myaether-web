@@ -6,7 +6,8 @@ import {
   countAbnormalParameters,
   extractNumericValue,
   parseReferenceRange,
-  isAbnormalValue
+  isAbnormalValue,
+  getReportsWithParameters
 } from '../utils/apiService';
 
 const DashboardSummary = ({ reports, userData }) => {
