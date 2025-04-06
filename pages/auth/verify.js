@@ -66,7 +66,7 @@ export default function VerifyEmailPage() {
               Welcome to Aether Health! Your account is now active.
             </p>
             <p className={styles.redirectMessage}>
-              You'll be redirected to the login page in a few seconds...
+              You&apos;ll be redirected to the login page in a few seconds...
             </p>
           </div>
         )}
