@@ -69,10 +69,11 @@ const HealthTimeline = ({ reports, userData }) => {
     const extractNumericValue = (value) => {
       if (value === undefined || value === null) return null;
         
-      // Fix: unwrap Mongo-like object value
+        // Fix: unwrap Mongo-like object value
       if (typeof value === 'object' && value.$numberDouble) {
         value = value.$numberDouble;
       }
+        
         
       if (typeof value === 'number') return value;
       
@@ -181,75 +182,23 @@ const HealthTimeline = ({ reports, userData }) => {
           setSelectedParameters([mockParameters[0].id]);
         }
       } else {
-        // De-duplicate parameters with the same name (case-insensitive)
-        const uniqueParameters = [];
-        const nameMap = {};
+        setAvailableParameters(parameters);
         
-        parameters.forEach(param => {
-          const lowerName = param.name.toLowerCase();
-          if (!nameMap[lowerName]) {
-            nameMap[lowerName] = param;
-            uniqueParameters.push(param);
-          } else if (param.category && param.category !== 'General') {
-            // If we already have this param but this one has a better category, use it
-            nameMap[lowerName].category = param.category;
+        // Group parameters by category
+        const groupedParameters = parameters.reduce((acc, param) => {
+          if (!acc[param.category]) {
+            acc[param.category] = [];
           }
-        });
+          acc[param.category].push(param);
+          return acc;
+        }, {});
         
-        console.log("After deduplication:", uniqueParameters.length, "unique parameters");
-        setAvailableParameters(uniqueParameters);
+        setParametersByCategory(groupedParameters);
+        setExpandedCategories(Object.keys(groupedParameters));
         
-        // Group parameters by category with better organization
-        const groupedParameters = {};
-        
-        uniqueParameters.forEach(param => {
-          // Normalize category names - capitalize first letter of each word
-          let category = param.category || 'General';
-          category = category
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ');
-          
-          if (!groupedParameters[category]) {
-            groupedParameters[category] = [];
-          }
-          groupedParameters[category].push(param);
-        });
-        
-        // Sort parameters alphabetically within each category
-        Object.keys(groupedParameters).forEach(category => {
-          groupedParameters[category].sort((a, b) => a.name.localeCompare(b.name));
-        });
-        
-        // Sort categories alphabetically for better organization
-        const sortedCategories = Object.keys(groupedParameters).sort();
-        const sortedParametersByCategory = {};
-        
-        sortedCategories.forEach(category => {
-          sortedParametersByCategory[category] = groupedParameters[category];
-        });
-        
-        setParametersByCategory(sortedParametersByCategory);
-        setExpandedCategories(sortedCategories);
-        
-        // Select one parameter from each of the first few categories (if not already selected)
-        if (selectedParameters.length === 0) {
-          const initialSelectedParams = [];
-          const categoriesToShow = Math.min(3, sortedCategories.length);
-          
-          for (let i = 0; i < categoriesToShow; i++) {
-            const category = sortedCategories[i];
-            if (groupedParameters[category].length > 0) {
-              initialSelectedParams.push(groupedParameters[category][0].id);
-            }
-          }
-          
-          if (initialSelectedParams.length > 0) {
-            setSelectedParameters(initialSelectedParams);
-          } else if (uniqueParameters.length > 0) {
-            // Fallback to just selecting the first parameter
-            setSelectedParameters([uniqueParameters[0].id]);
-          }
+        // Set first parameter as default selected
+        if (parameters.length > 0 && selectedParameters.length === 0) {
+          setSelectedParameters([parameters[0].id]);
         }
       }
     };
@@ -359,16 +308,41 @@ const HealthTimeline = ({ reports, userData }) => {
         setTimelineData(timelineData);
       }
     };
-
-    // Initialize health events as empty array
-    const initializeHealthEvents = () => {
-      setHealthEvents([]);
+/*
+    // Mock health events
+    const generateMockHealthEvents = () => {
+      const today = new Date();
+      const mockEvents = [
+        {
+          id: 1,
+          date: new Date(today.getFullYear(), today.getMonth() - 2, 15).toISOString().split('T')[0],
+          title: 'Started Medication',
+          description: 'Started taking Lisinopril 10mg daily',
+          type: 'medication'
+        },
+        {
+          id: 2,
+          date: new Date(today.getFullYear(), today.getMonth() - 6, 5).toISOString().split('T')[0],
+          title: 'Annual Physical',
+          description: 'Completed annual physical exam',
+          type: 'procedure'
+        },
+        {
+          id: 3,
+          date: new Date(today.getFullYear(), today.getMonth() - 9, 20).toISOString().split('T')[0],
+          title: 'Diet Change',
+          description: 'Started Mediterranean diet',
+          type: 'lifestyle'
+        }
+      ];
+      
+      setHealthEvents(mockEvents);
     };
-
+*/
     setDebug(prev => ({ ...prev, reportCount: reports.length }));
     extractParameters();
     generateTimelineData();
-    initializeHealthEvents();
+   // generateMockHealthEvents();
     setLoading(false);
   }, [reports]);
 
@@ -721,26 +695,13 @@ const HealthTimeline = ({ reports, userData }) => {
         <ResponsiveContainer width="100%" height={400}>
           <LineChart
             data={filteredTimelineData}
-            margin={{ top: 20, right: 40, left: 20, bottom: 20 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatDate}
-              padding={{ left: 20, right: 20 }}
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis
-              domain={['auto', 'auto']}
-              padding={{ top: 20, bottom: 20 }}
-              tick={{ fontSize: 12 }}
-            />
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tickFormatter={formatDate} />
+            <YAxis />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              wrapperStyle={{ paddingTop: 10, fontSize: 12 }}
-            />
+            <Legend />
             
             {selectedParameters.map((paramId, index) => {
               const param = availableParameters.find(p => p.id === paramId);
