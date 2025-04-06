@@ -308,7 +308,7 @@ const HealthTimeline = ({ reports, userData }) => {
         setTimelineData(timelineData);
       }
     };
-
+/*
     // Mock health events
     const generateMockHealthEvents = () => {
       const today = new Date();
@@ -338,7 +338,7 @@ const HealthTimeline = ({ reports, userData }) => {
       
       setHealthEvents(mockEvents);
     };
-
+*/
     setDebug(prev => ({ ...prev, reportCount: reports.length }));
     extractParameters();
     generateTimelineData();
