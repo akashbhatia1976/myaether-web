@@ -8,9 +8,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine,
-  ReferenceArea,
-  Scatter
+  ReferenceLine
 } from 'recharts';
 import {
   Calendar,
@@ -62,7 +60,9 @@ const HealthTimeline = ({ reports, userData }) => {
 
     console.log("Reports received by HealthTimeline:", reports.length);
     console.log("Formatting reports for timeline:", reports.length, "reports");
-    console.log("Sample report structure:", JSON.stringify(reports[0], null, 2));
+    if (reports.length > 0) {
+      console.log("Sample report structure:", JSON.stringify(reports[0], null, 2));
+    }
     setLoading(true);
 
     // Function to safely extract numeric value from a string
@@ -415,60 +415,7 @@ const HealthTimeline = ({ reports, userData }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className={styles.parameterSelection}>
-        {Object.entries(parametersByCategory).map(([category, params]) => (
-          <div key={category} className={styles.parameterCategory}>
-            <div
-              className={styles.parameterCategoryHeader}
-              onClick={() => toggleCategory(category)}
-            >
-              <ChevronDown
-                size={16}
-                className={`${styles.categoryToggle} ${expandedCategories.includes(category) ? styles.categoryToggleExpanded : ''}`}
-              />
-              <span className={styles.parameterCategoryName}>{category}</span>
-            </div>
-            {expandedCategories.includes(category) && (
-              <div className={styles.parameterButtons}>
-                {params.map((param, index) => {
-                  const isSelected = selectedParameters.includes(param.id);
-                  const colorIndex = availableParameters.findIndex(p => p.id === param.id) % paramColors.length;
-                  
-                  return (
-                    <button
-                      key={param.id}
-                      className={`${styles.parameterButton} ${isSelected ? styles.parameterButtonActive : ''}`}
-                      style={{
-                        borderColor: isSelected ? paramColors[colorIndex] : 'transparent',
-                        color: isSelected ? paramColors[colorIndex] : '#4b5563'
-                      }}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedParameters(selectedParameters.filter(p => p !== param.id));
-                        } else {
-                          setSelectedParameters([...selectedParameters, param.id]);
-                        }
-                      }}
-                    >
-                      {param.name}
-                      {showTrends && isSelected && trends[param.id] && (
-                        <span
-                          className={`${styles.trendIndicator} ${styles[`trend${trends[param.id].direction.charAt(0).toUpperCase() + trends[param.id].direction.slice(1)}`]}`}
-                          title={`${trends[param.id].direction} by ${trends[param.id].percent}%`}
-                        >
-                          {trends[param.id].direction === 'increasing' ? '↑' :
-                           trends[param.id].direction === 'decreasing' ? '↓' : '→'}
-                          {trends[param.id].percent}%
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>.timelineTooltip}>
+        <div className={styles.timelineTooltip}>
           <p className={styles.tooltipDate}>{formatDate(label)}</p>
           <div className={styles.tooltipParameters}>
             {payload.map((entry, index) => {
@@ -683,4 +630,294 @@ const HealthTimeline = ({ reports, userData }) => {
         </div>
       )}
       
-      <div className={styles
+      <div className={styles.parameterSelection}>
+        {Object.entries(parametersByCategory).map(([category, params]) => (
+          <div key={category} className={styles.parameterCategory}>
+            <div
+              className={styles.parameterCategoryHeader}
+              onClick={() => toggleCategory(category)}
+            >
+              <ChevronDown
+                size={16}
+                className={`${styles.categoryToggle} ${expandedCategories.includes(category) ? styles.categoryToggleExpanded : ''}`}
+              />
+              <span className={styles.parameterCategoryName}>{category}</span>
+            </div>
+            {expandedCategories.includes(category) && (
+              <div className={styles.parameterButtons}>
+                {params.map((param, index) => {
+                  const isSelected = selectedParameters.includes(param.id);
+                  const colorIndex = availableParameters.findIndex(p => p.id === param.id) % paramColors.length;
+                  
+                  return (
+                    <button
+                      key={param.id}
+                      className={`${styles.parameterButton} ${isSelected ? styles.parameterButtonActive : ''}`}
+                      style={{
+                        borderColor: isSelected ? paramColors[colorIndex] : 'transparent',
+                        color: isSelected ? paramColors[colorIndex] : '#4b5563'
+                      }}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedParameters(selectedParameters.filter(p => p !== param.id));
+                        } else {
+                          setSelectedParameters([...selectedParameters, param.id]);
+                        }
+                      }}
+                    >
+                      {param.name}
+                      {showTrends && isSelected && trends[param.id] && (
+                        <span
+                          className={`${styles.trendIndicator} ${styles[`trend${trends[param.id].direction.charAt(0).toUpperCase() + trends[param.id].direction.slice(1)}`]}`}
+                          title={`${trends[param.id].direction} by ${trends[param.id].percent}%`}
+                        >
+                          {trends[param.id].direction === 'increasing' ? '↑' :
+                           trends[param.id].direction === 'decreasing' ? '↓' : '→'}
+                          {trends[param.id].percent}%
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      <div className={styles.timelineChartContainer}>
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart
+            data={filteredTimelineData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tickFormatter={formatDate} />
+            <YAxis />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            
+            {selectedParameters.map((paramId, index) => {
+              const param = availableParameters.find(p => p.id === paramId);
+              if (!param) return null;
+              
+              const colorIndex = availableParameters.findIndex(p => p.id === paramId) % paramColors.length;
+              const color = paramColors[colorIndex];
+              
+              // Extract normal range if available
+              let refLines = [];
+              if (param.normalRange) {
+                const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
+                if (!isNaN(min) && !isNaN(max)) {
+                  refLines = [
+                    <ReferenceLine
+                      key={`${paramId}-min`}
+                      y={min}
+                      stroke={color}
+                      strokeDasharray="3 3"
+                      opacity={0.6}
+                    />,
+                    <ReferenceLine
+                      key={`${paramId}-max`}
+                      y={max}
+                      stroke={color}
+                      strokeDasharray="3 3"
+                      opacity={0.6}
+                    />
+                  ];
+                }
+              }
+              
+              return [
+                <Line
+                  key={paramId}
+                  type="monotone"
+                  dataKey={paramId}
+                  name={param.name}
+                  stroke={color}
+                  strokeWidth={2}
+                  dot={renderDot}
+                  activeDot={{ r: 8 }}
+                  connectNulls={true}
+                />,
+                ...refLines
+              ];
+            })}
+            
+            {/* Add event markers to chart */}
+            {filteredHealthEvents.map(event => {
+              // Find the closest data point to the event date
+              const eventDate = new Date(event.date);
+              const closestDataPoint = filteredTimelineData.reduce((closest, dataPoint) => {
+                const dataPointDate = new Date(dataPoint.date);
+                const currentDiff = Math.abs(dataPointDate - eventDate);
+                const closestDiff = closest ? Math.abs(new Date(closest.date) - eventDate) : Infinity;
+                return currentDiff < closestDiff ? dataPoint : closest;
+              }, null);
+              
+              if (!closestDataPoint) return null;
+              
+              // Use the Y-value of the first selected parameter for placement
+              const paramId = selectedParameters[0];
+              if (!paramId || !closestDataPoint[paramId]) return null;
+              
+              return (
+                <ReferenceLine
+                  key={`event-${event.id}`}
+                  x={closestDataPoint.date}
+                  stroke={eventTypeColors[event.type]}
+                  strokeWidth={2}
+                  opacity={0.7}
+                  label={{
+                    value: "⚑",
+                    position: 'top',
+                    fill: eventTypeColors[event.type],
+                    fontSize: 16
+                  }}
+                />
+              );
+            })}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      
+      {/* Health Events Section */}
+      <div className={styles.healthEventsSection}>
+        <h3 className={styles.healthEventsTitle}>Health Events</h3>
+        
+        <div className={styles.healthEventsList}>
+          {filteredHealthEvents.length > 0 ? (
+            filteredHealthEvents.map(event => (
+              <div key={event.id} className={styles.healthEventCard} style={{ borderLeftColor: eventTypeColors[event.type] }}>
+                <div className={styles.healthEventHeader}>
+                  <span className={styles.healthEventDate}>{formatDate(event.date)}</span>
+                  <span className={styles.healthEventType} style={{ backgroundColor: eventTypeColors[event.type] }}>
+                    {event.type}
+                  </span>
+                </div>
+                <div className={styles.healthEventTitle}>{event.title}</div>
+                {event.description && (
+                  <div className={styles.healthEventDescription}>{event.description}</div>
+                )}
+                <button
+                  className={styles.healthEventDelete}
+                  onClick={() => setHealthEvents(healthEvents.filter(e => e.id !== event.id))}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className={styles.healthEventsEmpty}>
+              <Info size={18} />
+              <span>No health events in the selected time period</span>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Add Event Modal */}
+      {showAddEvent && (
+        <div className={styles.eventModalOverlay}>
+          <div className={styles.eventModal}>
+            <div className={styles.eventModalHeader}>
+              <h3>Add Health Event</h3>
+              <button
+                className={styles.eventModalClose}
+                onClick={() => setShowAddEvent(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleEventSubmit} className={styles.eventForm}>
+              <div className={styles.eventFormField}>
+                <label htmlFor="event-date">Date</label>
+                <input
+                  type="date"
+                  id="event-date"
+                  value={newEvent.date}
+                  onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+                  required
+                />
+              </div>
+              <div className={styles.eventFormField}>
+                <label htmlFor="event-type">Type</label>
+                <select
+                  id="event-type"
+                  value={newEvent.type}
+                  onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
+                >
+                  <option value="medication">Medication</option>
+                  <option value="procedure">Procedure/Test</option>
+                  <option value="illness">Illness</option>
+                  <option value="lifestyle">Lifestyle Change</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className={styles.eventFormField}>
+                <label htmlFor="event-title">Title</label>
+                <input
+                  type="text"
+                  id="event-title"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
+                  placeholder="e.g., Started new medication"
+                  required
+                />
+              </div>
+              <div className={styles.eventFormField}>
+                <label htmlFor="event-description">Description (optional)</label>
+                <textarea
+                  id="event-description"
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
+                  placeholder="Additional details..."
+                  rows={3}
+                />
+              </div>
+              <div className={styles.eventFormActions}>
+                <button
+                  type="button"
+                  className={styles.eventFormCancel}
+                  onClick={() => setShowAddEvent(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className={styles.eventFormSubmit}>
+                  Add Event
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      <div className={styles.timelineLegend}>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.normal}`}></div>
+          <div className={styles.legendText}>Normal Value</div>
+        </div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.high}`}></div>
+          <div className={styles.legendText}>High Value</div>
+        </div>
+        <div className={styles.legendItem}>
+          <div className={`${styles.legendMarker} ${styles.low}`}></div>
+          <div className={styles.legendText}>Low Value</div>
+        </div>
+        <div className={styles.legendItem}>
+          <div className={styles.legendLine}></div>
+          <div className={styles.legendText}>Reference Range</div>
+        </div>
+        {filteredHealthEvents.length > 0 && (
+          <div className={styles.legendItem}>
+            <div className={styles.legendFlag}>⚑</div>
+            <div className={styles.legendText}>Health Event</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default HealthTimeline;
