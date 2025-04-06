@@ -72,19 +72,25 @@ export default function Dashboard() {
           setReports(reportsData);
           console.log("📦 Reports fetched:", reportsData.length);
 
-          // Get reports with parameters for the timeline
-          try {
-            const timelineReportsData = await getReportsWithParameters(user.userId);
-            console.log("📊 Timeline reports fetched:", timelineReportsData.length);
-            setTimelineReports(timelineReportsData);
-          } catch (timelineError) {
-            // If the new endpoint fails, fall back to existing code
-            console.error("❌ Error fetching timeline reports:", timelineError);
-            console.log("Falling back to using regular reports for timeline");
-            // Your existing fallback approach
-            const formattedReports = formatReportsForTimeline(reportsData);
-            setTimelineReports(formattedReports);
-          }
+            // In your fetchData function in dashboard/index.js
+            try {
+              const timelineReportsData = await getReportsWithParameters(user.userId);
+              console.log("📊 Timeline reports fetched:", timelineReportsData.length);
+              setTimelineReports(timelineReportsData);
+            } catch (timelineError) {
+              // If the new endpoint fails, fall back to existing code
+              console.error("❌ Error fetching timeline reports:", timelineError);
+              console.log("Falling back to using report details for timeline");
+              
+              try {
+                // Use the updated async version and pass userId
+                const formattedReports = await formatReportsForTimeline(reportsData, user.userId);
+                setTimelineReports(formattedReports);
+              } catch (fallbackError) {
+                console.error("❌ Even fallback approach failed:", fallbackError);
+                setTimelineReports([]);
+              }
+            }
 
         } catch (err) {
           console.error("❌ Error loading dashboard:", err.message);

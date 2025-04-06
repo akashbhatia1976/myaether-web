@@ -445,62 +445,39 @@ const countAbnormalParameters = (reports) => {
  * @param {Array} reports - Array of report objects
  * @returns {Array} - Formatted reports for timeline
  */
-const formatReportsForTimeline = (reports) => {
-  if (!reports || !Array.isArray(reports) || reports.length === 0) return [];
-    
-    // Add debug information
-    console.log("Formatting reports for timeline:", reports.length, "reports");
+// Update this function to use async/await to fetch detailed reports
+export const formatReportsForTimeline = async (reports, userId) => {
+  if (!reports || !reports.length || !userId) {
+    console.log("Missing required data for timeline");
+    return [];
+  }
   
-  // Create a standardized format for the timeline component
-  const formattedReports = [];
+  console.log(`Formatting ${reports.length} reports for timeline`);
   
-  // Process each report
-  reports.forEach(report => {
-    const reportId = report._id || report.reportId;
-    
-    // Get extracted parameters from the report
-    const extractedParameters = report.extractedParameters;
-    
-    if (!extractedParameters || !Array.isArray(extractedParameters) || extractedParameters.length === 0) return; // Skip if no parameters available
-    
-    // Format the parameters
-    const formattedParams = [];
-    
-    extractedParameters.forEach(param => {
-      // Skip if no value, name, or invalid value
-      if (!param.name || !param.value) return;
+  // Create timeline reports by fetching detailed report data
+  const timelineReports = [];
+  
+  // Process only up to 10 reports to avoid too many requests
+  for (const report of reports.slice(0, 10)) {
+    try {
+      const reportId = report._id || report.reportId;
+      // Fetch the detailed report to get parameters
+      const response = await axiosInstance.get(`/reports/${userId}/${reportId}`);
       
-      // Get the numeric value
-      const numValue = extractNumericValue(param.value);
-      
-      // Only add if we have a valid numeric value
-      if (numValue !== undefined && !isNaN(numValue)) {
-        formattedParams.push({
-          id: param.name.toLowerCase().replace(/\s+/g, '_'), // Create ID from name
-          name: param.name,
-          value: numValue,
-          unit: param.unit || '',
-          category: param.category || 'General',
-          normalRange: param.referenceRange || ''
+      if (response.data && response.data.extractedParameters) {
+        timelineReports.push({
+          ...report,
+          reportId: reportId,
+          extractedParameters: response.data.extractedParameters
         });
       }
-    });
-    
-    // Only add reports with valid parameters
-    if (formattedParams.length > 0) {
-      formattedReports.push({
-        id: reportId,
-        date: report.date,
-        name: report.name || report.fileName || "Unnamed Report",
-        parameters: formattedParams
-      });
+    } catch (error) {
+      console.error(`Error fetching details for report in timeline: ${error.message}`);
     }
-  });
+  }
   
-  // Sort reports by date (newest to oldest)
-  formattedReports.sort((a, b) => new Date(b.date) - new Date(a.date));
-  
-  return formattedReports;
+  console.log(`Created ${timelineReports.length} reports for timeline with parameters`);
+  return timelineReports;
 };
 
 // Keep the original fetchWithTimeout for any legacy code that might use it directly
