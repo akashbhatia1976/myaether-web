@@ -36,6 +36,7 @@ const HealthTimeline = ({ reports, userData }) => {
   const [newEvent, setNewEvent] = useState({ date: '', title: '', description: '', type: 'medication' });
   const [expandedCategories, setExpandedCategories] = useState([]);
   const [parametersByCategory, setParametersByCategory] = useState({});
+  const [debug, setDebug] = useState({ reportCount: 0, dataPoints: 0 });
   
   // Colors for different parameters
   const paramColors = [
@@ -59,8 +60,27 @@ const HealthTimeline = ({ reports, userData }) => {
       return;
     }
 
-    console.log("Reports received by HealthTimeline:", reports);
+    console.log("Reports received by HealthTimeline:", reports.length);
+    console.log("Formatting reports for timeline:", reports.length, "reports");
+    console.log("Sample report structure:", JSON.stringify(reports[0], null, 2));
     setLoading(true);
+
+    // Function to safely extract numeric value from a string
+    const extractNumericValue = (value) => {
+      if (value === undefined || value === null) return null;
+      
+      if (typeof value === 'number') return value;
+      
+      if (typeof value === 'string') {
+        // Remove non-numeric characters except decimal point and negative sign
+        const numericString = value.replace(/[^\d.-]/g, '');
+        const parsedValue = parseFloat(numericString);
+        
+        return isNaN(parsedValue) ? null : parsedValue;
+      }
+      
+      return null;
+    };
 
     // Function to extract parameters from all reports
     const extractParameters = () => {
@@ -69,23 +89,49 @@ const HealthTimeline = ({ reports, userData }) => {
       const parameterIds = new Set();
       
       reports.forEach(report => {
-        if (!report.extractedParameters) return;
+        if (!report.extractedParameters) {
+          console.log("No extractedParameters found in report:", report._id || report.id);
+          return;
+        }
         
         // Handle both array and object formats for parameters
-        const paramsArray = Array.isArray(report.extractedParameters)
-          ? report.extractedParameters
-          : Object.entries(report.extractedParameters).map(([name, value]) => ({
-              name,
-              value: typeof value === 'object' ? value.value || value.Value : value,
-              unit: typeof value === 'object' ? value.unit || value.Unit : '',
-              normalRange: typeof value === 'object' ?
-                (value.referenceRange ||
-                (value.normalLow && value.normalHigh ? `${value.normalLow}-${value.normalHigh}` : '') ||
-                (value.lowerLimit && value.upperLimit ? `${value.lowerLimit}-${value.upperLimit}` : '')) : ''
-            }));
+        let paramsArray = [];
         
+        if (Array.isArray(report.extractedParameters)) {
+          // Array format - each item has name, value, etc.
+          paramsArray = report.extractedParameters;
+        } else if (typeof report.extractedParameters === 'object') {
+          // Object format - keys are parameter names
+          paramsArray = Object.entries(report.extractedParameters).map(([name, param]) => {
+            if (typeof param === 'object') {
+              // Complex object with value, unit, etc.
+              return {
+                name: name,
+                value: param.value || param.Value || null,
+                unit: param.unit || param.Unit || '',
+                normalRange: param.referenceRange ||
+                  (param.normalLow && param.normalHigh ? `${param.normalLow}-${param.normalHigh}` : '') ||
+                  (param.lowerLimit && param.upperLimit ? `${param.lowerLimit}-${param.upperLimit}` : ''),
+                category: param.category || 'General'
+              };
+            } else {
+              // Simple value (string or number)
+              return {
+                name: name,
+                value: param,
+                unit: '',
+                normalRange: '',
+                category: 'General'
+              };
+            }
+          });
+        }
+        
+        // Process each parameter
         paramsArray.forEach(param => {
-          const paramName = param.name || '';
+          if (!param || !param.name) return;
+          
+          const paramName = param.name;
           const paramId = paramName.toLowerCase().replace(/\s+/g, '_');
           
           if (!paramId || parameterIds.has(paramId)) return;
@@ -100,6 +146,8 @@ const HealthTimeline = ({ reports, userData }) => {
           });
         });
       });
+      
+      console.log("Extracted parameters:", parameters.length);
       
       // If no parameters were found, add some mock ones for testing
       if (parameters.length === 0) {
@@ -128,7 +176,6 @@ const HealthTimeline = ({ reports, userData }) => {
           setSelectedParameters([mockParameters[0].id]);
         }
       } else {
-        console.log("Found real parameters:", parameters);
         setAvailableParameters(parameters);
         
         // Group parameters by category
@@ -160,38 +207,38 @@ const HealthTimeline = ({ reports, userData }) => {
       });
       
       // Create data points from actual reports
-      const timelineData = sortedReports.map(report => {
+      const timelineData = [];
+      
+      sortedReports.forEach(report => {
         const reportDate = new Date(report.date || report.reportDate);
         
         // Create a data point with the date
         const dataPoint = {
           date: reportDate.toISOString().split('T')[0],
           dateObj: reportDate,
-          reportId: report._id || report.reportId
+          reportId: report._id || report.id || report.reportId
         };
         
         // Add parameter values to the data point
         if (report.extractedParameters) {
-          // Handle both array and object formats
+          let processedParams = false;
+          
+          // Handle array format
           if (Array.isArray(report.extractedParameters)) {
             report.extractedParameters.forEach(param => {
-              if (!param.name) return;
+              if (!param || !param.name) return;
               
               const paramId = param.name.toLowerCase().replace(/\s+/g, '_');
-              let value = param.value;
+              const value = extractNumericValue(param.value);
               
-              // Try to extract a numeric value
-              if (typeof value === 'string') {
-                const numericValue = parseFloat(value.replace(/[^\d.-]/g, ''));
-                if (!isNaN(numericValue)) {
-                  value = numericValue;
-                }
+              if (value !== null) {
+                dataPoint[paramId] = value;
+                processedParams = true;
               }
-              
-              dataPoint[paramId] = value;
             });
-          } else {
-            // Handle object format
+          }
+          // Handle object format
+          else if (typeof report.extractedParameters === 'object') {
             Object.entries(report.extractedParameters).forEach(([name, param]) => {
               const paramId = name.toLowerCase().replace(/\s+/g, '_');
               let value;
@@ -202,25 +249,26 @@ const HealthTimeline = ({ reports, userData }) => {
                 value = param;
               }
               
-              // Try to extract a numeric value
-              if (typeof value === 'string') {
-                const numericValue = parseFloat(value.replace(/[^\d.-]/g, ''));
-                if (!isNaN(numericValue)) {
-                  value = numericValue;
-                }
-              }
+              const numericValue = extractNumericValue(value);
               
-              dataPoint[paramId] = value;
+              if (numericValue !== null) {
+                dataPoint[paramId] = numericValue;
+                processedParams = true;
+              }
             });
           }
+          
+          if (processedParams) {
+            timelineData.push(dataPoint);
+          }
         }
-        
-        return dataPoint;
       });
       
+      console.log("Generated timeline data points:", timelineData.length);
+      setDebug(prev => ({ ...prev, dataPoints: timelineData.length }));
+      
       // If no data was generated, create some mock data for testing
-      if (timelineData.length === 0 || !timelineData.some(item =>
-          availableParameters.some(param => item[param.id] !== undefined))) {
+      if (timelineData.length === 0) {
         console.log("No real timeline data found, using mock data for testing");
         const today = new Date();
         const mockTimelineData = [];
@@ -251,7 +299,6 @@ const HealthTimeline = ({ reports, userData }) => {
         
         setTimelineData(mockTimelineData);
       } else {
-        console.log("Generated real timeline data:", timelineData);
         setTimelineData(timelineData);
       }
     };
@@ -286,6 +333,7 @@ const HealthTimeline = ({ reports, userData }) => {
       setHealthEvents(mockEvents);
     };
 
+    setDebug(prev => ({ ...prev, reportCount: reports.length }));
     extractParameters();
     generateTimelineData();
     generateMockHealthEvents();
@@ -300,7 +348,10 @@ const HealthTimeline = ({ reports, userData }) => {
     const trends = {};
     
     selectedParameters.forEach(paramId => {
-      const values = filteredTimelineData.map(item => item[paramId]).filter(val => val !== undefined);
+      const values = filteredTimelineData
+        .map(item => item[paramId])
+        .filter(val => val !== undefined && val !== null);
+      
       const n = values.length;
       
       if (n < 2) {
@@ -364,7 +415,60 @@ const HealthTimeline = ({ reports, userData }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className={styles.timelineTooltip}>
+        <div className={styles.parameterSelection}>
+        {Object.entries(parametersByCategory).map(([category, params]) => (
+          <div key={category} className={styles.parameterCategory}>
+            <div
+              className={styles.parameterCategoryHeader}
+              onClick={() => toggleCategory(category)}
+            >
+              <ChevronDown
+                size={16}
+                className={`${styles.categoryToggle} ${expandedCategories.includes(category) ? styles.categoryToggleExpanded : ''}`}
+              />
+              <span className={styles.parameterCategoryName}>{category}</span>
+            </div>
+            {expandedCategories.includes(category) && (
+              <div className={styles.parameterButtons}>
+                {params.map((param, index) => {
+                  const isSelected = selectedParameters.includes(param.id);
+                  const colorIndex = availableParameters.findIndex(p => p.id === param.id) % paramColors.length;
+                  
+                  return (
+                    <button
+                      key={param.id}
+                      className={`${styles.parameterButton} ${isSelected ? styles.parameterButtonActive : ''}`}
+                      style={{
+                        borderColor: isSelected ? paramColors[colorIndex] : 'transparent',
+                        color: isSelected ? paramColors[colorIndex] : '#4b5563'
+                      }}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedParameters(selectedParameters.filter(p => p !== param.id));
+                        } else {
+                          setSelectedParameters([...selectedParameters, param.id]);
+                        }
+                      }}
+                    >
+                      {param.name}
+                      {showTrends && isSelected && trends[param.id] && (
+                        <span
+                          className={`${styles.trendIndicator} ${styles[`trend${trends[param.id].direction.charAt(0).toUpperCase() + trends[param.id].direction.slice(1)}`]}`}
+                          title={`${trends[param.id].direction} by ${trends[param.id].percent}%`}
+                        >
+                          {trends[param.id].direction === 'increasing' ? '↑' :
+                           trends[param.id].direction === 'decreasing' ? '↓' : '→'}
+                          {trends[param.id].percent}%
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>.timelineTooltip}>
           <p className={styles.tooltipDate}>{formatDate(label)}</p>
           <div className={styles.tooltipParameters}>
             {payload.map((entry, index) => {
@@ -375,15 +479,17 @@ const HealthTimeline = ({ reports, userData }) => {
               let status = 'normal';
               if (param.normalRange) {
                 const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
-                if (entry.value < min) status = 'low';
-                else if (entry.value > max) status = 'high';
+                if (!isNaN(min) && !isNaN(max)) {
+                  if (entry.value < min) status = 'low';
+                  else if (entry.value > max) status = 'high';
+                }
               }
               
               return (
                 <div key={index} className={styles.tooltipParameter}>
                   <span style={{ color: entry.color }}>{param?.name}: </span>
                   <span className={`${styles.tooltipValue} ${styles[`tooltipValue${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}>
-                    {entry.value.toFixed(1)} {param?.unit}
+                    {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value} {param?.unit}
                   </span>
                 </div>
               );
@@ -403,7 +509,10 @@ const HealthTimeline = ({ reports, userData }) => {
     if (!param || !param.normalRange) return null;
     
     const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
+    if (isNaN(min) || isNaN(max)) return null;
+    
     const value = payload[dataKey];
+    if (typeof value !== 'number') return null;
     
     const isAbnormal = value < min || value > max;
     
@@ -462,7 +571,7 @@ const HealthTimeline = ({ reports, userData }) => {
     filteredTimelineData.forEach(dataPoint => {
       csvContent += `${dataPoint.date},`;
       selectedParameters.forEach(paramId => {
-        csvContent += `${dataPoint[paramId]},`;
+        csvContent += `${dataPoint[paramId] !== undefined ? dataPoint[paramId] : ''},`;
       });
       csvContent = csvContent.slice(0, -1) + "\n";
     });
@@ -566,294 +675,12 @@ const HealthTimeline = ({ reports, userData }) => {
         </div>
       </div>
       
-      <div className={styles.parameterSelection}>
-        {Object.entries(parametersByCategory).map(([category, params]) => (
-          <div key={category} className={styles.parameterCategory}>
-            <div
-              className={styles.parameterCategoryHeader}
-              onClick={() => toggleCategory(category)}
-            >
-              <ChevronDown
-                size={16}
-                className={`${styles.categoryToggle} ${expandedCategories.includes(category) ? styles.categoryToggleExpanded : ''}`}
-              />
-              <span className={styles.parameterCategoryName}>{category}</span>
-            </div>
-            {expandedCategories.includes(category) && (
-              <div className={styles.parameterButtons}>
-                {params.map((param, index) => {
-                  const isSelected = selectedParameters.includes(param.id);
-                  const colorIndex = availableParameters.findIndex(p => p.id === param.id) % paramColors.length;
-                  
-                  return (
-                    <button
-                      key={param.id}
-                      className={`${styles.parameterButton} ${isSelected ? styles.parameterButtonActive : ''}`}
-                      style={{
-                        borderColor: isSelected ? paramColors[colorIndex] : 'transparent',
-                        color: isSelected ? paramColors[colorIndex] : '#4b5563'
-                      }}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedParameters(selectedParameters.filter(p => p !== param.id));
-                        } else {
-                          setSelectedParameters([...selectedParameters, param.id]);
-                        }
-                      }}
-                    >
-                      {param.name}
-                      {showTrends && isSelected && trends[param.id] && (
-                        <span
-                          className={`${styles.trendIndicator} ${styles[`trend${trends[param.id].direction.charAt(0).toUpperCase() + trends[param.id].direction.slice(1)}`]}`}
-                          title={`${trends[param.id].direction} by ${trends[param.id].percent}%`}
-                        >
-                          {trends[param.id].direction === 'increasing' ? '↑' :
-                           trends[param.id].direction === 'decreasing' ? '↓' : '→'}
-                          {trends[param.id].percent}%
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {debug.dataPoints === 0 && (
+        <div className={styles.debugInfo}>
+          <p>Debug Info: Processed {debug.reportCount} reports, but no data points were generated.
+             This could indicate a problem with the format of the extracted parameters.
+             Check browser console for details.</p>
+        </div>
+      )}
       
-      <div className={styles.timelineChartContainer}>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart
-            data={filteredTimelineData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDate} />
-            <YAxis />
-          <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              
-              {selectedParameters.map((paramId, index) => {
-                  const param = availableParameters.find(p => p.id === paramId);
-                  if (!param) return null;
-                  
-                  const colorIndex = availableParameters.findIndex(p => p.id === paramId) % paramColors.length;
-                  const color = paramColors[colorIndex];
-                  
-                  // Extract normal range if available
-                  let refLines = [];
-                  if (param.normalRange) {
-                      const [min, max] = param.normalRange.split('-').map(v => parseFloat(v));
-                      refLines = [
-                          <ReferenceLine
-                           key={`${paramId}-min`}
-                           y={min}
-                           stroke={color}
-                           strokeDasharray="3 3"
-                           opacity={0.6}
-                           />,
-                           <ReferenceLine
-                           key={`${paramId}-max`}
-                           y={max}
-                           stroke={color}
-                           strokeDasharray="3 3"
-                           opacity={0.6}
-                           />
-                      ];
-                  }
-                  
-                  return [
-                      <Line
-                       key={paramId}
-                       type="monotone"
-                       dataKey={paramId}
-                       name={param.name}
-                       stroke={color}
-                       strokeWidth={2}
-                       dot={renderDot}
-                       activeDot={{ r: 8 }}
-                       />,
-                       ...refLines
-                  ];
-              })}
-              
-              {/* Add event markers to chart */}
-              {filteredHealthEvents.map(event => {
-                  // Find the closest data point to the event date
-                  const eventDate = new Date(event.date);
-                  const closestDataPoint = filteredTimelineData.reduce((closest, dataPoint) => {
-                      const dataPointDate = new Date(dataPoint.date);
-                      const currentDiff = Math.abs(dataPointDate - eventDate);
-                      const closestDiff = closest ? Math.abs(new Date(closest.date) - eventDate) : Infinity;
-                      return currentDiff < closestDiff ? dataPoint : closest;
-                  }, null);
-                  
-                  if (!closestDataPoint) return null;
-                  
-                  // Use the Y-value of the first selected parameter for placement
-                  const paramId = selectedParameters[0];
-                  if (!paramId || !closestDataPoint[paramId]) return null;
-                  
-                  return (
-                          <ReferenceLine
-                          key={`event-${event.id}`}
-                          x={closestDataPoint.date}
-                          stroke={eventTypeColors[event.type]}
-                          strokeWidth={2}
-                          opacity={0.7}
-                          label={{
-                              value: "⚑",
-                              position: 'top',
-                              fill: eventTypeColors[event.type],
-                              fontSize: 16
-                          }}
-                          />
-                          );
-              })}
-              </LineChart>
-              </ResponsiveContainer>
-              </div>
-              
-              {/* Health Events Section */}
-              <div className={styles.healthEventsSection}>
-              <h3 className={styles.healthEventsTitle}>Health Events</h3>
-              
-              <div className={styles.healthEventsList}>
-              {filteredHealthEvents.length > 0 ? (
-                                                  filteredHealthEvents.map(event => (
-                                                                                     <div key={event.id} className={styles.healthEventCard} style={{ borderLeftColor: eventTypeColors[event.type] }}>
-                                                                                     <div className={styles.healthEventHeader}>
-                                                                                     <span className={styles.healthEventDate}>{formatDate(event.date)}</span>
-                                                                                     <span className={styles.healthEventType} style={{ backgroundColor: eventTypeColors[event.type] }}>
-                                                                                     {event.type}
-                                                                                     </span>
-                                                                                     </div>
-                                                                                     <div className={styles.healthEventTitle}>{event.title}</div>
-                                                                                     {event.description && (
-                                                                                                            <div className={styles.healthEventDescription}>{event.description}</div>
-                                                                                                            )}
-                                                                                     <button
-                                                                                     className={styles.healthEventDelete}
-                                                                                     onClick={() => setHealthEvents(healthEvents.filter(e => e.id !== event.id))}
-                                                                                     >
-                                                                                     <X size={14} />
-                                                                                     </button>
-                                                                                     </div>
-                                                                                     ))
-                                                  ) : (
-                                                       <div className={styles.healthEventsEmpty}>
-                                                       <Info size={18} />
-                                                       <span>No health events in the selected time period</span>
-                                                       </div>
-                                                       )}
-              </div>
-              </div>
-              
-              {/* Add Event Modal */}
-              {showAddEvent && (
-                                <div className={styles.eventModalOverlay}>
-                                <div className={styles.eventModal}>
-                                <div className={styles.eventModalHeader}>
-                                <h3>Add Health Event</h3>
-                                <button
-                                className={styles.eventModalClose}
-                                onClick={() => setShowAddEvent(false)}
-                                >
-                                <X size={18} />
-                                </button>
-                                </div>
-                                <form onSubmit={handleEventSubmit} className={styles.eventForm}>
-                                <div className={styles.eventFormField}>
-                                <label htmlFor="event-date">Date</label>
-                                <input
-                                type="date"
-                                id="event-date"
-                                value={newEvent.date}
-                                onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
-                                required
-                                />
-                                </div>
-                                <div className={styles.eventFormField}>
-                                <label htmlFor="event-type">Type</label>
-                                <select
-                                id="event-type"
-                                value={newEvent.type}
-                                onChange={(e) => setNewEvent({...newEvent, type: e.target.value})}
-                                >
-                                <option value="medication">Medication</option>
-                                <option value="procedure">Procedure/Test</option>
-                                <option value="illness">Illness</option>
-                                <option value="lifestyle">Lifestyle Change</option>
-                                <option value="other">Other</option>
-                                </select>
-                                </div>
-                                <div className={styles.eventFormField}>
-                                <label htmlFor="event-title">Title</label>
-                                <input
-                                type="text"
-                                id="event-title"
-                                value={newEvent.title}
-                                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                                placeholder="e.g., Started new medication"
-                                required
-                                />
-                                </div>
-                                <div className={styles.eventFormField}>
-                                <label htmlFor="event-description">Description (optional)</label>
-                                <textarea
-                                id="event-description"
-                                value={newEvent.description}
-                                onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                                placeholder="Additional details..."
-                                rows={3}
-                                />
-                                </div>
-                                <div className={styles.eventFormActions}>
-                                <button
-                                type="button"
-                                className={styles.eventFormCancel}
-                                onClick={() => setShowAddEvent(false)}
-                                >
-                                Cancel
-                                </button>
-                                <button type="submit" className={styles.eventFormSubmit}>
-                                Add Event
-                                </button>
-                                </div>
-                                </form>
-                                </div>
-                                </div>
-                                )}
-              
-              <div className={styles.timelineLegend}>
-              <div className={styles.legendItem}>
-              <div className={`${styles.legendMarker} ${styles.normal}`}></div>
-              <div className={styles.legendText}>Normal
-              
-              
-              Value</div>
-                     </div>
-                     <div className={styles.legendItem}>
-                       <div className={`${styles.legendMarker} ${styles.high}`}></div>
-                       <div className={styles.legendText}>High Value</div>
-                     </div>
-                     <div className={styles.legendItem}>
-                       <div className={`${styles.legendMarker} ${styles.low}`}></div>
-                       <div className={styles.legendText}>Low Value</div>
-                     </div>
-                     <div className={styles.legendItem}>
-                       <div className={styles.legendLine}></div>
-                       <div className={styles.legendText}>Reference Range</div>
-                     </div>
-                     {filteredHealthEvents.length > 0 && (
-                       <div className={styles.legendItem}>
-                         <div className={styles.legendFlag}>⚑</div>
-                         <div className={styles.legendText}>Health Event</div>
-                       </div>
-                     )}
-                   </div>
-                 </div>
-               );
-              };
-
-              export default HealthTimeline;
+      <div className={styles

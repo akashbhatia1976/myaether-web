@@ -535,3 +535,12 @@
     overflow-y: auto;
   }
 }
+
+.debugInfo {
+  background-color: #fff3cd;
+  border: 1px solid #ffeeba;
+  color: #856404;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}

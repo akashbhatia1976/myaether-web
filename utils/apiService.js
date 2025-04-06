@@ -447,6 +447,9 @@ const countAbnormalParameters = (reports) => {
  */
 const formatReportsForTimeline = (reports) => {
   if (!reports || !Array.isArray(reports) || reports.length === 0) return [];
+    
+    // Add debug information
+    console.log("Formatting reports for timeline:", reports.length, "reports");
   
   // Create a standardized format for the timeline component
   const formattedReports = [];
