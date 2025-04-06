@@ -57,10 +57,17 @@ export default function UploadReportPage() {
       );
 
       if (response?.reportId) {
-        router.push({
-          pathname: "/reports/reportdetails",
-          query: { reportId: response.reportId },
-        });
+          // Show success message before redirecting
+          setMessage("✅ Report uploaded successfully! Redirecting...");
+          
+          // Add a slight delay before redirecting to allow the user to see the success message
+        
+          setTimeout(() => {
+              router.push({
+                  pathname: "/reports/reportdetails",
+                  query: { reportId: response.reportId },
+              });
+          }, 1500);
       } else {
         throw new Error(response?.message || "Upload failed");
       }
