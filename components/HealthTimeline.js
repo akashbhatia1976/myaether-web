@@ -342,7 +342,7 @@ const HealthTimeline = ({ reports, userData }) => {
     setDebug(prev => ({ ...prev, reportCount: reports.length }));
     extractParameters();
     generateTimelineData();
-    generateMockHealthEvents();
+   // generateMockHealthEvents();
     setLoading(false);
   }, [reports]);
 
