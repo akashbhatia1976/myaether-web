@@ -68,7 +68,13 @@ const HealthTimeline = ({ reports, userData }) => {
     // Function to safely extract numeric value from a string
     const extractNumericValue = (value) => {
       if (value === undefined || value === null) return null;
-      
+        
+        // Fix: unwrap Mongo-like object value
+      if (typeof value === 'object' && value.$numberDouble) {
+        value = value.$numberDouble;
+      }
+        
+        
       if (typeof value === 'number') return value;
       
       if (typeof value === 'string') {
