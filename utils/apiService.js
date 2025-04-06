@@ -582,8 +582,7 @@ export {
   parseReferenceRange,
   isAbnormalValue,
   countAbnormalParameters,
-  formatReportsForTimeline,
-  getReportsWithParameters,
+  formatReportsForTimeline
   // Export axios instance in case it's needed elsewhere
   axiosInstance
 };
