@@ -544,3 +544,49 @@
   margin-bottom: 15px;
   border-radius: 4px;
 }
+
+/* Add these styles to your timeline.module.css file */
+
+.emptyTimelineState {
+  background-color: #f9fafb;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin: 2rem 0;
+  border: 1px dashed #d1d5db;
+}
+
+.emptyTimelineIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #9ca3af;
+}
+
+.emptyTimelineTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.emptyTimelineMessage {
+  color: #6b7280;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+  line-height: 1.5;
+}
+
+.emptyTimelineButton {
+  background-color: #0ea5e9;
+  color: white;
+  font-weight: 500;
+  padding: 0.5rem 1.5rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.emptyTimelineButton:hover {
+  background-color: #0284c7;
+}

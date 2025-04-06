@@ -654,13 +654,22 @@ const HealthTimeline = ({ reports, userData }) => {
         </div>
       </div>
       
-      {debug.dataPoints === 0 && (
-        <div className={styles.debugInfo}>
-          <p>Debug Info: Processed {debug.reportCount} reports, but no data points were generated.
-             This could indicate a problem with the format of the extracted parameters.
-             Check browser console for details.</p>
-        </div>
-      )}
+          {debug.dataPoints === 0 && (
+            <div className={styles.emptyTimelineState}>
+              <div className={styles.emptyTimelineIcon}>📊</div>
+              <h3 className={styles.emptyTimelineTitle}>No health data to display yet</h3>
+              <p className={styles.emptyTimelineMessage}>
+                Upload your lab reports to see your health parameters visualized over time.
+                Track trends, monitor changes, and gain insights into your health journey.
+              </p>
+              <button
+                onClick={() => window.location.href = '/reports/upload'}
+                className={styles.emptyTimelineButton}
+              >
+                Upload Lab Reports
+              </button>
+            </div>
+          )}
       
       <div className={styles.parameterSelection}>
         {Object.entries(parametersByCategory).map(([category, params]) => (
