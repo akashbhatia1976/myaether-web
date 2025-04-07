@@ -67,7 +67,7 @@ export default function UploadReportPage() {
                   pathname: "/reports/reportdetails",
                   query: { reportId: response.reportId },
               });
-          }, 1500);
+          }, 3000);
       } else {
         throw new Error(response?.message || "Upload failed");
       }
