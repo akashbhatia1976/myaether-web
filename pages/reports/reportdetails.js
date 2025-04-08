@@ -1,12 +1,9 @@
-import {
-  getConfidenceScore,
-  submitConfidenceFeedback, useEffect, useState } from "react";
-import {
-  getConfidenceScore,
-  submitConfidenceFeedback, useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
 import styles from "../../styles/reportdetails.module.css";
+
 import {
   getConfidenceScore,
   submitConfidenceFeedback,
@@ -15,6 +12,7 @@ import {
   axiosInstance,
   BASE_URL,
 } from "../../utils/apiService";
+
 
 export async function getServerSideProps(context) {
   const { req } = context;
