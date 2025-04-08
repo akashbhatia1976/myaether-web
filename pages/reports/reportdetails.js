@@ -6,8 +6,7 @@ import {
   getReportDetails,
   getConfidenceScore,
   submitConfidenceFeedback,
-} from "../services/apiService";
-import toast from "react-hot-toast";
+} from "../utils/apiService";
 
 const ReportDetails = () => {
   const router = useRouter();
@@ -52,7 +51,6 @@ const ReportDetails = () => {
         confidenceScore: confidenceScore?.overallConfidence,
       };
       await submitConfidenceFeedback(reportId, feedback);
-      toast.success("Thank you for your feedback!");
     } catch (error) {
       console.error("Error submitting report feedback:", error);
     }
@@ -67,7 +65,6 @@ const ReportDetails = () => {
       ],
     };
     setFeedbackData(newFeedback);
-    toast.success(`Feedback recorded for ${paramName}`);
   };
 
   const groupParametersByCategory = () => {
