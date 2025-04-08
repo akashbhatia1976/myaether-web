@@ -7,8 +7,6 @@ import {
   getUserDetails,
   getAuthHeaders,
   axiosInstance,
-  getConfidenceScore,
-  submitConfidenceFeedback,
   BASE_URL,
 } from "../../utils/apiService";
 
@@ -38,10 +36,8 @@ export default function ReportDetails() {
   const [loading, setLoading] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [confidenceScore, setConfidenceScore] = useState(null);
   const [userId, setUserId] = useState(null);
   const [activeTab, setActiveTab] = useState("parameters");
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   useEffect(() => {
     if (!router.isReady || !reportId) return;
@@ -52,15 +48,7 @@ export default function ReportDetails() {
         setUserId(user.userId);
 
         console.log(`📡 Fetching report: ${BASE_URL}/reports/${user.userId}/${reportId}`);
-        await fetchReportDetails(user.userId, reportId);
-          
-        // Fetch confidence score
-        try {
-          const score = await getConfidenceScore(reportId);
-          setConfidenceScore(score);
-        } catch (error) {
-          console.error('Failed to fetch confidence score:', error);
-        }
+        fetchReportDetails(user.userId, reportId);
       } catch (err) {
         console.error("❌ Failed to fetch user from token:", err);
         router.push("/auth/login");
@@ -87,21 +75,6 @@ export default function ReportDetails() {
       console.error("❌ Failed to load report:", err);
     } finally {
       setLoading(false);
-    }
-  };
-    
-  // Method to handle confidence feedback
-  const handleConfidenceFeedback = async (isPositive) => {
-    try {
-      await submitConfidenceFeedback(reportId, {
-        reportFeedback: isPositive,
-        confidenceScore: confidenceScore?.overallConfidence
-      });
-      
-      setFeedbackSubmitted(true);
-      setTimeout(() => setFeedbackSubmitted(false), 3000);
-    } catch (error) {
-      console.error('Feedback submission failed:', error);
     }
   };
 
@@ -361,22 +334,6 @@ export default function ReportDetails() {
   const groupedParams = groupParametersByCategory(extractedParams);
   const reportName = reportDetails.name || reportDetails.fileName || "Unnamed Report";
 
-  // Style for feedback toast
-  const feedbackToastStyle = {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    backgroundColor: '#10B981',
-    color: 'white',
-    padding: '12px 24px',
-    borderRadius: '6px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    zIndex: 1000,
-    opacity: feedbackSubmitted ? 1 : 0,
-    transition: 'opacity 0.3s ease',
-    pointerEvents: feedbackSubmitted ? 'auto' : 'none'
-  };
-
   return (
     <div className={styles.container}>
       <Head>
@@ -406,64 +363,6 @@ export default function ReportDetails() {
               <span className={styles.metaLabel}>Date:</span>
               <span className={styles.metaValue}>{formatDate(reportDetails.date)}</span>
             </div>
-            
-            {confidenceScore && (
-              <div className={styles.reportMetaItem} style={{ display: 'flex', alignItems: 'center' }}>
-                {/* Confidence Indicator */}
-                <div
-                  style={{
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    display: 'inline-block',
-                    marginRight: '8px',
-                    backgroundColor: confidenceScore.overallConfidence >= 80 ? '#10B981' :
-                                    confidenceScore.overallConfidence >= 50 ? '#F59E0B' :
-                                    '#EF4444'
-                  }}
-                />
-                
-                {/* Confidence Percentage */}
-                <span className={styles.metaLabel}>Extraction Confidence:</span>
-                <span className={styles.metaValue} style={{ marginRight: '8px' }}>
-                  {Math.round(confidenceScore.overallConfidence)}%
-                </span>
-                
-                {/* Feedback Buttons */}
-                <div style={{ display: 'inline-flex' }}>
-                  <button
-                    onClick={() => handleConfidenceFeedback(true)}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      padding: '2px 6px',
-                      borderRadius: '50%'
-                    }}
-                    aria-label="Thumbs up for confidence"
-                    title="Data extraction looks good"
-                  >
-                    👍
-                  </button>
-                  <button
-                    onClick={() => handleConfidenceFeedback(false)}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      padding: '2px 6px',
-                      borderRadius: '50%'
-                    }}
-                    aria-label="Thumbs down for confidence"
-                    title="Data extraction needs improvement"
-                  >
-                    👎
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -502,11 +401,7 @@ export default function ReportDetails() {
           </button>
         </div>
       </main>
-      
-      {/* Feedback Toast */}
-      <div style={feedbackToastStyle}>
-        Thank you for your feedback!
-      </div>
     </div>
   );
 }
+

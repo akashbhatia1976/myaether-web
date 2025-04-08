@@ -536,26 +536,6 @@ export const getReportsWithParameters = async (userId) => {
   }
 };
 
-// Add these functions to your existing apiService.js
- async function getConfidenceScore(reportId) {
-  try {
-    const response = await axiosInstance.get(`/confidence-scores/${reportId}`);
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching confidence score:', error);
-    return null;
-  }
-}
-
- async function submitConfidenceFeedback(reportId, feedback) {
-  try {
-    const response = await axiosInstance.post(`/confidence-scores/feedback/${reportId}`, feedback);
-    return response.data;
-  } catch (error) {
-    console.error('Error submitting confidence feedback:', error);
-    return null;
-  }
-}
 
 // ✅ Centralized Export (keeping same exports for compatibility)
 export {
@@ -580,8 +560,6 @@ export {
   parseReferenceRange,
   isAbnormalValue,
   countAbnormalParameters,
-  getConfidenceScore,
-  submitConfidenceFeedback,
     
   // Export axios instance in case it's needed elsewhere
   axiosInstance
