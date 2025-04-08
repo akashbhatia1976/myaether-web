@@ -41,7 +41,20 @@ export default function ReportDetails() {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [confidenceScore, setConfidenceScore] = useState(null);
   const [activeTab, setActiveTab] = useState("parameters");
+    
+    const fetchConfidenceScore = async () => {
+      try {
+        const score = await getConfidenceScore(reportId);
+        console.log("✅ Confidence Score:", score);
+        // You can also store it in state if you want to display it:
+        // setConfidenceScore(score);
+      } catch (err) {
+        console.error("❌ Confidence score fetch error:", err);
+      }
+    };
+
 
   useEffect(() => {
     fetchConfidenceScore();
