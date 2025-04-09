@@ -98,8 +98,6 @@ axiosInstance.interceptors.response.use(
 // ✅ Keep the getAuthHeaders function for compatibility
 const getAuthHeaders = () => {
   const token = getToken();
-  console.log("🔐 getAuthHeaders using token:", token);
-  const token = getToken();
   
   if (!token) {
     console.error("❌ Authentication token is missing");
@@ -520,8 +518,16 @@ const fetchWithTimeout = async (url, options = {}) => {
 export const getReportsWithParameters = async (userId) => {
   try {
     console.log(`📡 Request: GET /reports/${userId}/withParameters`);
-    const response = await axiosInstance.get(`/reports/${userId}/withParameters`);
-    const data = response.data;
+    const response = await fetch(`${BASE_URL}/reports/${userId}/withParameters`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status}`);
+    }
+
+    const data = await response.json();
     console.log(`📦 Reports with parameters: ${data.length}`);
     return data;
   } catch (error) {
@@ -580,4 +586,3 @@ export {
   // Export axios instance in case it's needed elsewhere
   axiosInstance
 };
-
