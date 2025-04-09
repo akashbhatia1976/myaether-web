@@ -49,7 +49,7 @@ export default function ReportDetails() {
         const score = await getConfidenceScore(reportId);
         console.log("✅ Confidence Score:", score);
         // You can also store it in state if you want to display it:
-        // setConfidenceScore(score);
+        setConfidenceScore(score);
       } catch (err) {
         console.error("❌ Confidence score fetch error:", err);
       }
@@ -67,6 +67,8 @@ export default function ReportDetails() {
 
         console.log(`📡 Fetching report: ${BASE_URL}/reports/${user.userId}/${reportId}`);
         fetchReportDetails(user.userId, reportId);
+          // Call fetchConfidenceScore after report details are fetched
+        await fetchConfidenceScore();
       } catch (err) {
         console.error("❌ Failed to fetch user from token:", err);
         router.push("/auth/login");
@@ -146,66 +148,7 @@ export default function ReportDetails() {
     return grouped;
   };
 
-  
-  const renderParameterConfidence = (paramName) => {
-    if (!confidenceScore?.parameterConfidences) return null;
-
-    const match = confidenceScore.parameterConfidences.find(
-      (p) => p.parameterName === paramName
-    );
-
-    if (!match) return null;
-
-    return (
-      <div style={{ marginTop: "4px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontWeight: 500, color: "#555" }}>
-          Confidence: {match.confidence}%
-        </span>
-        <button
-          onClick={() => handleParameterFeedback(paramName, "thumbs_up")}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            padding: "2px"
-          }}
-        >
-          👍
-        </button>
-        <button
-          onClick={() => handleParameterFeedback(paramName, "thumbs_down")}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            padding: "2px"
-          }}
-        >
-          👎
-        </button>
-      </div>
-    );
-  };
-
-
-  const handleParameterFeedback = async (paramName, feedbackType) => {
-    try {
-      await submitConfidenceFeedback(reportId, {
-        parameterFeedback: [
-          {
-            parameterName: paramName,
-            feedback: feedbackType,
-          },
-        ],
-      });
-    } catch (error) {
-      console.error(`Feedback for ${paramName} failed:`, error);
-    }
-  };
-
-const renderParameters = (params) => {
+  const renderParameters = (params) => {
     if (!params || Object.keys(params).length === 0) {
       return <div className={styles.noDataMessage}>No parameters found in this report.</div>;
     }
@@ -226,7 +169,6 @@ const renderParameters = (params) => {
               </div>
               <div className={styles.parameterValue}>
                 {val?.Value ?? "N/A"} {val?.Unit || ""}
-                {renderParameterConfidence(key)}
               </div>
             </li>
           ))}
@@ -441,6 +383,14 @@ const renderParameters = (params) => {
               <span className={styles.metaLabel}>Date:</span>
               <span className={styles.metaValue}>{formatDate(reportDetails.date)}</span>
             </div>
+          {confidenceScore && (
+            <div className={styles.reportMetaItem}>
+              <span className={styles.metaLabel}>Confidence Score:</span>
+              <span className={styles.metaValue}>
+                {confidenceScore.overallConfidence.toFixed(2)}%
+              </span>
+            </div>
+          )}
           </div>
         </div>
 
