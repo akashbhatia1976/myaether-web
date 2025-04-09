@@ -383,6 +383,14 @@ export default function ReportDetails() {
               <span className={styles.metaLabel}>Date:</span>
               <span className={styles.metaValue}>{formatDate(reportDetails.date)}</span>
             </div>
+          {confidenceScore && (
+            <div className={styles.reportMetaItem}>
+              <span className={styles.metaLabel}>Confidence Score:</span>
+              <span className={styles.metaValue}>
+                {confidenceScore.overallConfidence.toFixed(2)}%
+              </span>
+            </div>
+          )}
           </div>
         </div>
 
