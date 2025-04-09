@@ -49,7 +49,7 @@ export default function ReportDetails() {
         const score = await getConfidenceScore(reportId);
         console.log("✅ Confidence Score:", score);
         // You can also store it in state if you want to display it:
-        // setConfidenceScore(score);
+        setConfidenceScore(score);
       } catch (err) {
         console.error("❌ Confidence score fetch error:", err);
       }
@@ -67,6 +67,8 @@ export default function ReportDetails() {
 
         console.log(`📡 Fetching report: ${BASE_URL}/reports/${user.userId}/${reportId}`);
         fetchReportDetails(user.userId, reportId);
+          // Call fetchConfidenceScore after report details are fetched
+        await fetchConfidenceScore();
       } catch (err) {
         console.error("❌ Failed to fetch user from token:", err);
         router.push("/auth/login");
