@@ -99,7 +99,6 @@ axiosInstance.interceptors.response.use(
 const getAuthHeaders = () => {
   const token = getToken();
   console.log("🔐 getAuthHeaders using token:", token);
-  const token = getToken();
   
   if (!token) {
     console.error("❌ Authentication token is missing");
