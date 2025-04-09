@@ -147,47 +147,48 @@ export default function ReportDetails() {
   };
 
   
-  const renderParameterConfidence = (paramName) => {
-    if (!confidenceScore?.parameterConfidences) return null;
+    const renderParameterConfidence = (paramName) => {
+      if (!confidenceScore?.parameterConfidences) return null;
 
-    const match = confidenceScore.parameterConfidences.find(
-      (p) => p.parameterName === paramName
-    );
+      const match = confidenceScore.parameterConfidences.find(
+        (p) => p.parameterName.toLowerCase().trim() === paramName.toLowerCase().trim()
+      );
 
-    if (!match) return null;
+      if (!match) return null;
 
-    return (
-      <div style={{ marginTop: "4px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontWeight: 500, color: "#555" }}>
-          Confidence: {match.confidence}%
-        </span>
-        <button
-          onClick={() => handleParameterFeedback(paramName, "thumbs_up")}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            padding: "2px"
-          }}
-        >
-          👍
-        </button>
-        <button
-          onClick={() => handleParameterFeedback(paramName, "thumbs_down")}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            padding: "2px"
-          }}
-        >
-          👎
-        </button>
-      </div>
-    );
-  };
+      return (
+        <div style={{ marginTop: "4px", fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontWeight: 500, color: "#555" }}>
+            Confidence: {match.confidence}%
+          </span>
+          <button
+            onClick={() => handleParameterFeedback(paramName, "thumbs_up")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "1.1rem",
+              padding: "2px"
+            }}
+          >
+            👍
+          </button>
+          <button
+            onClick={() => handleParameterFeedback(paramName, "thumbs_down")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "1.1rem",
+              padding: "2px"
+            }}
+          >
+            👎
+          </button>
+        </div>
+      );
+    };
+
 
 
   const handleParameterFeedback = async (paramName, feedbackType) => {
