@@ -49,7 +49,7 @@ export default function ReportDetails() {
         const score = await getConfidenceScore(reportId);
         console.log("✅ Confidence Score:", score);
         // You can also store it in state if you want to display it:
-        // setConfidenceScore(score);
+      setConfidenceScore(score);
       } catch (err) {
         console.error("❌ Confidence score fetch error:", err);
       }
@@ -57,7 +57,7 @@ export default function ReportDetails() {
 
 
   useEffect(() => {
-    fetchConfidenceScore();
+    
     if (!router.isReady || !reportId) return;
 
     const fetchUserAndReport = async () => {
@@ -67,6 +67,8 @@ export default function ReportDetails() {
 
         console.log(`📡 Fetching report: ${BASE_URL}/reports/${user.userId}/${reportId}`);
         fetchReportDetails(user.userId, reportId);
+          
+        fetchConfidenceScore();
       } catch (err) {
         console.error("❌ Failed to fetch user from token:", err);
         router.push("/auth/login");
@@ -465,6 +467,64 @@ export default function ReportDetails() {
               <span className={styles.metaLabel}>Date:</span>
               <span className={styles.metaValue}>{formatDate(reportDetails.date)}</span>
             </div>
+          
+          {/* Add this block to display the confidence score */}
+              {confidenceScore && (
+                <div className={styles.reportMetaItem} style={{ display: 'flex', alignItems: 'center' }}>
+                  {/* Confidence Indicator */}
+                  <div
+                    style={{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      display: 'inline-block',
+                      marginRight: '8px',
+                      backgroundColor: confidenceScore.overallConfidence >= 80 ? '#10B981' :
+                                      confidenceScore.overallConfidence >= 50 ? '#F59E0B' :
+                                      '#EF4444'
+                    }}
+                  />
+                                   {/* Confidence Percentage */}
+                                          <span className={styles.metaLabel}>Extraction Confidence:</span>
+                                          <span className={styles.metaValue} style={{ marginRight: '8px' }}>
+                                            {Math.round(confidenceScore.overallConfidence)}%
+                                          </span>
+                                          
+                                          {/* Feedback Buttons */}
+                                          <div style={{ display: 'inline-flex' }}>
+                                            <button
+                                              onClick={() => handleParameterFeedback("overall", "thumbs_up")}
+                                              style={{
+                                                border: 'none',
+                                                background: 'none',
+                                                cursor: 'pointer',
+                                                fontSize: '16px',
+                                                padding: '2px 6px',
+                                                borderRadius: '50%'
+                                              }}
+                                              aria-label="Thumbs up for confidence"
+                                            >
+                                              👍
+                                            </button>
+                                   <button
+                                               onClick={() => handleParameterFeedback("overall", "thumbs_down")}
+                                               style={{
+                                                 border: 'none',
+                                                 background: 'none',
+                                                 cursor: 'pointer',
+                                                 fontSize: '16px',
+                                                 padding: '2px 6px',
+                                                 borderRadius: '50%'
+                                               }}
+                                               aria-label="Thumbs down for confidence"
+                                             >
+                                               👎
+                                             </button>
+                                           </div>
+                                         </div>
+                                       )}
+          
+          
           </div>
         </div>
 
