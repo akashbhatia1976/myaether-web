@@ -206,35 +206,58 @@ export default function ReportDetails() {
     }
   };
 
-const renderParameters = (params) => {
-    if (!params || Object.keys(params).length === 0) {
-      return <div className={styles.noDataMessage}>No parameters found in this report.</div>;
-    }
+    const renderParameters = (params) => {
+      if (!params || Object.keys(params).length === 0) {
+        return <div className={styles.noDataMessage}>No parameters found in this report.</div>;
+      }
 
-    return Object.entries(params).map(([category, values]) => (
-      <div key={category} className={styles.categoryBlock}>
-        <h3 className={styles.categoryTitle}>{category}</h3>
-        <ul className={styles.parametersList}>
-          {Object.entries(values).map(([key, val]) => (
-            <li key={key} className={styles.parameterItem}>
-              <div>
-                <div className={styles.parameterName}>{key}</div>
-                {val?.["Reference Range"] && (
-                  <div className={styles.parameterRange}>
-                    Range: {val["Reference Range"]}
+      return Object.entries(params).map(([category, values]) => (
+        <div key={category} className={styles.categoryBlock}>
+          <h3 className={styles.categoryTitle}>{category}</h3>
+          <ul className={styles.parametersList}>
+            {Object.entries(values).map(([key, val]) => {
+              const paramConfidence = confidenceScore?.parameterConfidences?.find(
+                (p) => p.parameterName === key
+              );
+
+              return (
+                <li key={key} className={styles.parameterItem}>
+                  <div>
+                    <div className={styles.parameterName}>{key}</div>
+                    {val?.["Reference Range"] && (
+                      <div className={styles.parameterRange}>
+                        Range: {val["Reference Range"]}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className={styles.parameterValue}>
-                {val?.Value ?? "N/A"} {val?.Unit || ""}
-                {renderParameterConfidence(key)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    ));
-  };
+                  <div className={styles.parameterValue}>
+                    {val?.Value ?? "N/A"} {val?.Unit || ""}
+                    {paramConfidence && (
+                      <div style={{ fontSize: "0.85rem", marginTop: "4px", color: "#555" }}>
+                        Confidence: {paramConfidence.confidence}%
+                        <button
+                          onClick={() => handleParameterFeedback(key, "thumbs_up")}
+                          style={{ marginLeft: "8px" }}
+                        >
+                          👍
+                        </button>
+                        <button
+                          onClick={() => handleParameterFeedback(key, "thumbs_down")}
+                          style={{ marginLeft: "4px" }}
+                        >
+                          👎
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ));
+    };
+
 
   const renderAIAnalysis = () => {
     if (analyzing) {
