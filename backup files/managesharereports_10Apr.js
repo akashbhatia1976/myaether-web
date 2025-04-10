@@ -83,20 +83,7 @@ export default function ManageShareReports() {
 
       let data;
       if (reportId) {
-     //   data = await shareReport(payload);
-          
-          const token = localStorage.getItem('token');
-
-          data = await axios.post(
-            'https://medical-server-7fmg.onrender.com/api/share/share-report',
-            payload,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              }
-            }
-          );
-
+        data = await shareReport(payload);
       } else {
         data = await shareAllReports(payload);
       }
