@@ -1,16 +1,18 @@
-// 📁 pages/reports/sharedreports.js
+// 📁 pages/reports/sharedreports.js (refactored to match ShareScreen.js)
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import {
   getSharedReportsByUser,
   getReportsSharedWithUser,
+  revokeSharedReport,
+  getUserDetails,
 } from "../../utils/apiService";
 
-export default function SharedReportsPage() {
+export default function SharedReports() {
   const router = useRouter();
-  const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
-
+  const [userId, setUserId] = useState(null);
   const [sharedReports, setSharedReports] = useState([]);
   const [receivedReports, setReceivedReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,109 +20,100 @@ export default function SharedReportsPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!userId) return;
-    fetchSharedReports();
-    fetchReceivedReports();
-  }, [userId]);
-
-  const fetchSharedReports = async () => {
-    try {
-      const data = await getSharedReportsByUser(userId);
-      console.log("✅ Web shared-by data:", data);
-      setSharedReports(data);
-    } catch (err) {
-      console.error("❌ Error fetching shared-by reports:", err);
-      setError("Could not load reports shared by you.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchReceivedReports = async () => {
-    try {
-      const data = await getReportsSharedWithUser(userId);
-      console.log("✅ Web shared-with data:", data);
-      setReceivedReports(data);
-    } catch (err) {
-      console.error("❌ Error fetching received reports:", err);
-      setError("Could not load reports shared with you.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReportClick = (reportId, ownerId) => {
-    router.push({
-      pathname: "/reports/reportdetails",
-      query: { reportId, userId: ownerId },
-    });
-  };
+    const init = async () => {
+      try {
+        const user = await getUserDetails();
+        setUserId(user.userId);
+        const [shared, received] = await Promise.all([
+          getSharedReportsByUser(user.userId),
+          getReportsSharedWithUser(user.userId),
+        ]);
+        setSharedReports(shared);
+        setReceivedReports(received);
+      } catch (err) {
+        console.error("❌ Failed to load shared reports:", err);
+        setError("Failed to load shared reports.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    init();
+  }, []);
 
   const formatDate = (dateStr) => {
     try {
-      return new Date(dateStr).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      return new Date(dateStr).toLocaleDateString();
     } catch {
       return "Invalid Date";
     }
   };
 
+  const handleRevoke = async (report) => {
+    if (!confirm(`Revoke access to report ${report.reportId}?`)) return;
+    try {
+      await revokeSharedReport({
+        ownerId: userId,
+        reportId: report.reportId,
+        sharedWithId: report.sharedWithId || undefined,
+        sharedWithEmail: report.sharedWithEmail || undefined,
+      });
+      setSharedReports((prev) => prev.filter((r) => r._id !== report._id));
+    } catch (err) {
+      alert("Failed to revoke access. Try again.");
+    }
+  };
+
   const renderReportItem = (report) => {
-    const label = viewMode === "shared"
-      ? report.sharedWithId || report.sharedWithEmail || report.recipientPhone || "Unknown"
-      : report.ownerId || "Unknown";
-
-    const reportName = report.name || report.fileName || report.reportId || "Unnamed Report";
-
+    const displayName =
+      report.name || report.fileName || report.reportId || "Unnamed Report";
     return (
-      <li
-        key={report._id}
-        style={styles.reportItem}
-        onClick={() => handleReportClick(report.reportId, viewMode === "shared" ? userId : report.ownerId)}
-      >
-        <p><strong>📄 Report:</strong> {reportName}</p>
+      <div key={report._id} style={styles.card}>
+        <p><strong>📄 Report:</strong> {displayName}</p>
         <p>
           {viewMode === "shared"
-            ? `👤 Shared With: ${label}`
-            : `📥 Shared By: ${label}`}
+            ? `👤 Shared With: ${report.sharedWithId || report.sharedWithEmail || "(invite sent)"}`
+            : `📥 Shared By: ${report.ownerId}`}
         </p>
         <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
-      </li>
+        <button
+          onClick={() => router.push(`/reports/reportdetails?reportId=${report.reportId}&userId=${report.ownerId || userId}`)}
+          style={styles.viewBtn}
+        >
+          View Report
+        </button>
+        {viewMode === "shared" && (
+          <button
+            onClick={() => handleRevoke(report)}
+            style={styles.revokeBtn}
+          >
+            Revoke Access
+          </button>
+        )}
+      </div>
     );
   };
 
   return (
     <div style={styles.container}>
-      <h2>📑 Shared Reports</h2>
-
-      <div style={styles.toggleContainer}>
+      <Head><title>Shared Reports | Aether</title></Head>
+      <h2>🔗 Shared Reports</h2>
+      <div style={styles.toggleGroup}>
         <button
           onClick={() => setViewMode("shared")}
           style={viewMode === "shared" ? styles.activeToggle : styles.toggle}
-        >
-          Shared by me
-        </button>
+        >Shared by Me</button>
         <button
           onClick={() => setViewMode("received")}
           style={viewMode === "received" ? styles.activeToggle : styles.toggle}
-        >
-          Shared with me
-        </button>
+        >Shared with Me</button>
       </div>
-
       {isLoading ? (
-        <p>Loading reports...</p>
+        <p>Loading...</p>
       ) : error ? (
         <p style={{ color: "red" }}>{error}</p>
       ) : (
-        <ul style={styles.list}>
-          {(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}
-        </ul>
+        <div>{(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}</div>
       )}
-
       <button style={styles.backButton} onClick={() => router.push("/dashboard")}>⬅️ Back to Dashboard</button>
     </div>
   );
@@ -133,46 +126,59 @@ const styles = {
     padding: 20,
     fontFamily: "Arial, sans-serif",
   },
-  toggleContainer: {
+  toggleGroup: {
     display: "flex",
     justifyContent: "center",
+    gap: "10px",
     marginBottom: 20,
   },
   toggle: {
-    marginRight: 10,
-    padding: "10px 15px",
-    backgroundColor: "#ddd",
-    border: "none",
+    padding: "10px 20px",
+    border: "1px solid #ccc",
     borderRadius: 5,
+    backgroundColor: "#f0f0f0",
     cursor: "pointer",
   },
   activeToggle: {
+    padding: "10px 20px",
+    border: "1px solid #6200ee",
+    borderRadius: 5,
+    backgroundColor: "#6200ee",
+    color: "white",
+    cursor: "pointer",
+  },
+  card: {
+    backgroundColor: "#f9f9f9",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    border: "1px solid #e0e0e0",
+  },
+  viewBtn: {
+    marginTop: 8,
     marginRight: 10,
-    padding: "10px 15px",
     backgroundColor: "#0D9488",
     color: "white",
     border: "none",
-    borderRadius: 5,
+    padding: "8px 12px",
+    borderRadius: 4,
     cursor: "pointer",
   },
-  list: {
-    listStyleType: "none",
-    padding: 0,
-  },
-  reportItem: {
-    padding: 15,
-    backgroundColor: "#f2f2f2",
-    borderRadius: 6,
-    marginBottom: 10,
+  revokeBtn: {
+    marginTop: 8,
+    backgroundColor: "#EF4444",
+    color: "white",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 4,
     cursor: "pointer",
   },
   backButton: {
-    marginTop: "20px",
+    marginTop: 30,
+    backgroundColor: "#ccc",
     padding: "10px 15px",
-    backgroundColor: "#0D9488",
-    color: "#fff",
     border: "none",
-    borderRadius: "5px",
+    borderRadius: 6,
     cursor: "pointer",
   },
 };
