@@ -7,7 +7,7 @@ import {
   getReportsSharedWithUser,
 } from "../../utils/apiService";
 
-export default function SharedReportsPage() {
+export default function ShareReports() {
   const router = useRouter();
   const userId = typeof window !== "undefined" ? localStorage.getItem("userId") : null;
 
@@ -26,11 +26,10 @@ export default function SharedReportsPage() {
   const fetchSharedReports = async () => {
     try {
       const data = await getSharedReportsByUser(userId);
-      console.log("✅ Web shared-by data:", data);
-      setSharedReports(data);
+      setSharedReports(data.sharedReports || []);
     } catch (err) {
-      console.error("❌ Error fetching shared-by reports:", err);
-      setError("Could not load reports shared by you.");
+      console.error("❌ Error fetching shared reports:", err);
+      setError("Could not load shared reports.");
     } finally {
       setIsLoading(false);
     }
@@ -39,11 +38,10 @@ export default function SharedReportsPage() {
   const fetchReceivedReports = async () => {
     try {
       const data = await getReportsSharedWithUser(userId);
-      console.log("✅ Web shared-with data:", data);
-      setReceivedReports(data);
+      setReceivedReports(data.sharedReports || []);
     } catch (err) {
       console.error("❌ Error fetching received reports:", err);
-      setError("Could not load reports shared with you.");
+      setError("Could not load received reports.");
     } finally {
       setIsLoading(false);
     }
@@ -58,34 +56,40 @@ export default function SharedReportsPage() {
 
   const formatDate = (dateStr) => {
     try {
-      return new Date(dateStr).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+      return new Date(dateStr).toLocaleDateString();
     } catch {
       return "Invalid Date";
     }
   };
 
   const renderReportItem = (report) => {
-    const label = viewMode === "shared"
-      ? report.sharedWithId || report.sharedWithEmail || report.recipientPhone || "Unknown"
-      : report.ownerId || "Unknown";
-
-    const reportName = report.name || report.fileName || report.reportId || "Unnamed Report";
+    const recipient =
+      report.sharedWithUserId?.trim() && report.sharedWithUserId !== ""
+        ? report.sharedWithUserId
+        : `${report.sharedWith} (invite sent)`;
 
     return (
       <li
         key={report._id}
         style={styles.reportItem}
-        onClick={() => handleReportClick(report.reportId, viewMode === "shared" ? userId : report.ownerId)}
+        onClick={() =>
+          handleReportClick(
+            report.reportId,
+            viewMode === "shared" ? userId : report.ownerId
+          )
+        }
       >
-        <p><strong>📄 Report:</strong> {reportName}</p>
+        <p><strong>📄 Report ID:</strong> {report.reportId}</p>
         <p>
           {viewMode === "shared"
-            ? `👤 Shared With: ${label}`
-            : `📥 Shared By: ${label}`}
+            ? `👤 Shared With: ${
+                report.sharedWithId
+                  ? report.sharedWithId
+                  : report.sharedWith
+                  ? `${report.sharedWith} (invite sent)`
+                  : "Unknown"
+              }`
+            : `📥 Shared By: ${report.ownerId}`}
         </p>
         <p>📅 Shared On: {formatDate(report.sharedAt)}</p>
       </li>
@@ -112,7 +116,7 @@ export default function SharedReportsPage() {
       </div>
 
       {isLoading ? (
-        <p>Loading reports...</p>
+        <p>Loading...</p>
       ) : error ? (
         <p style={{ color: "red" }}>{error}</p>
       ) : (
@@ -121,7 +125,9 @@ export default function SharedReportsPage() {
         </ul>
       )}
 
-      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>⬅️ Back to Dashboard</button>
+      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>
+        ⬅️ Back to Dashboard
+      </button>
     </div>
   );
 }
@@ -149,7 +155,7 @@ const styles = {
   activeToggle: {
     marginRight: 10,
     padding: "10px 15px",
-    backgroundColor: "#0D9488",
+    backgroundColor: "#6200ee",
     color: "white",
     border: "none",
     borderRadius: 5,
@@ -169,7 +175,7 @@ const styles = {
   backButton: {
     marginTop: "20px",
     padding: "10px 15px",
-    backgroundColor: "#0D9488",
+    backgroundColor: "#6200ee",
     color: "#fff",
     border: "none",
     borderRadius: "5px",
