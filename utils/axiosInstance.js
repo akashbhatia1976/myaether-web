@@ -1,35 +1,46 @@
+// 📁 utils/axiosInstance.js
+
 import axios from 'axios';
 
+// Token retrieval helper (only works on client side)
+const getToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token');
+  }
+  return null;
+};
+
+// Create Axios instance
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL + '/api',
   timeout: 60000,
-  withCredentials: true // Important for CORS cookies
+  withCredentials: true, // 🔒 Needed for cross-origin requests that include cookies
 });
 
-// Add request interceptor for authentication
+// ✅ Add request interceptor for Authorization header
 axiosInstance.interceptors.request.use(config => {
-  // Try localStorage first (more reliable cross-domain)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  
+  const token = getToken();
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
+
+  console.log("📡 Request:", config.method?.toUpperCase(), config.url);
+  console.log("📬 Headers:", config.headers);
+
   return config;
 }, error => {
   return Promise.reject(error);
 });
 
-// Add response interceptor for error handling
+// ✅ Add response interceptor to handle 401 errors
 axiosInstance.interceptors.response.use(
   response => response,
   error => {
-    if (error.response && error.response.status === 401) {
-      // Handle unauthorized errors
-      console.error('Authentication failed');
-      
-      // Redirect to login if on client side
+    if (error.response?.status === 401) {
+      console.error('🔒 Authentication failed');
       if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
         window.location.href = '/auth/login';
       }
     }
@@ -38,3 +49,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
+
