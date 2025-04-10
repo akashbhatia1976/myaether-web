@@ -83,6 +83,8 @@ const shareAllReports = async (payload) => {
 const getSharedReportsByUser = async (userId) => {
   if (!userId) throw new Error("User ID is required");
   const token = getToken();
+  console.log("📦 Token at fetch time (shared-by):", token); // 👈 log to check if token is being passed, or its null
+    
   if (!token) throw new Error("Token is missing");
 
   const response = await axiosInstance.get(
@@ -100,9 +102,26 @@ const getSharedReportsByUser = async (userId) => {
 
 
 const getReportsSharedWithUser = async (userId) => {
-  const response = await axiosInstance.get(`/share/shared-with/${encodeURIComponent(userId)}`);
+  if (!userId) throw new Error("User ID is required");
+
+  const token = getToken();
+  console.log("📦 Token at fetch time (shared-with):", token); // 👈 Debug log
+
+  if (!token) throw new Error("Token is missing");
+
+  const response = await axiosInstance.get(
+    `/share/shared-with/${encodeURIComponent(userId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      withCredentials: true
+    }
+  );
+
   return response.data;
 };
+
 
 const revokeSharedReport = async (payload) => {
   const response = await axiosInstance.post('/share/revoke', payload);
