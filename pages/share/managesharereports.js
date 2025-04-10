@@ -1,159 +1,153 @@
-// 📁 pages/reports/managesharereports.js (rewritten to mirror mobile ShareScreen)
+// 📁 pages/reports/managesharereports.js (Refactored)
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import {
-  getSharedReportsByUser,
-  getReportsSharedWithUser,
-  revokeSharedReport,
+  shareAllReports,
+  shareReport,
   getUserDetails,
 } from "../../utils/apiService";
 
 export default function ManageShareReports() {
   const router = useRouter();
-  const [userId, setUserId] = useState(null);
-  const [sharedReports, setSharedReports] = useState([]);
-  const [receivedReports, setReceivedReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("shared");
+  const { reportId, userId: queryUserId } = router.query;
+
+  const [userData, setUserData] = useState(null);
+  const [sharedWith, setSharedWith] = useState("");
+  const [relationshipType, setRelationshipType] = useState("Friend");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    const init = async () => {
+    const fetchUserData = async () => {
       try {
         const user = await getUserDetails();
-        setUserId(user.userId);
-        const [shared, received] = await Promise.all([
-          getSharedReportsByUser(user.userId),
-          getReportsSharedWithUser(user.userId),
-        ]);
-        setSharedReports(shared);
-        setReceivedReports(received);
+        setUserData(user);
       } catch (err) {
-        console.error("❌ Failed to load shared reports:", err);
-        setError("Failed to load shared reports.");
-      } finally {
-        setIsLoading(false);
+        console.error("❌ Error fetching user data:", err);
+        setError("Failed to load user session.");
       }
     };
-    init();
+
+    fetchUserData();
   }, []);
 
-  const handleRevoke = async (report) => {
-    if (!confirm(`Revoke access to report ${report.reportId}?`)) return;
+  const handleShare = async () => {
+    if (!sharedWith || !relationshipType) {
+      alert("Please enter recipient and select relationship type.");
+      return;
+    }
+
     try {
-      await revokeSharedReport({
-        ownerId: userId,
-        reportId: report.reportId,
-        sharedWithId: report.sharedWithId || undefined,
-        sharedWithEmail: report.sharedWithEmail || undefined,
-      });
-      setSharedReports((prev) => prev.filter((r) => r._id !== report._id));
+      setLoading(true);
+      setError(null);
+      setSuccessMessage("");
+
+      const payload = {
+        ownerId: userData.userId,
+        sharedWith,
+        relationshipType,
+        permissionType: "view",
+      };
+
+      if (reportId) {
+        payload.reportId = reportId;
+        await shareReport(payload);
+        setSuccessMessage("✅ Report shared successfully!");
+      } else {
+        await shareAllReports(payload);
+        setSuccessMessage("✅ All reports shared successfully!");
+      }
+
+      setSharedWith("");
+      setRelationshipType("Friend");
     } catch (err) {
-      alert("Failed to revoke access. Try again.");
+      console.error("❌ Share error:", err);
+      setError(err.message || "Failed to share. Try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderReportItem = (report) => (
-    <div key={report._id} style={styles.card}>
-      <p><strong>📄 Report:</strong> {report.reportId}</p>
-      <p>
-        {viewMode === "shared"
-          ? `👤 Shared With: ${report.sharedWithId || report.sharedWithEmail || "(invite sent)"}`
-          : `📥 Shared By: ${report.ownerId}`}
-      </p>
-      <p>📅 Shared On: {new Date(report.sharedAt).toLocaleDateString()}</p>
-      <button
-        onClick={() => router.push(`/reports/reportdetails?reportId=${report.reportId}&userId=${report.ownerId || userId}`)}
-        style={styles.viewBtn}
-      >
-        View Report
-      </button>
-      {viewMode === "shared" && (
-        <button onClick={() => handleRevoke(report)} style={styles.revokeBtn}>Revoke Access</button>
-      )}
-    </div>
-  );
+  if (!userData) return <p style={styles.message}>Loading user info...</p>;
 
   return (
     <div style={styles.container}>
-      <Head><title>Manage Shared Reports | Aether</title></Head>
-      <h2>🔗 Shared Reports</h2>
-      <div style={styles.toggleGroup}>
-        <button
-          onClick={() => setViewMode("shared")}
-          style={viewMode === "shared" ? styles.activeToggle : styles.toggle}
-        >Shared by Me</button>
-        <button
-          onClick={() => setViewMode("received")}
-          style={viewMode === "received" ? styles.activeToggle : styles.toggle}
-        >Shared with Me</button>
+      <Head>
+        <title>{reportId ? "Share Report" : "Share All Reports"} | Aether</title>
+      </Head>
+      <h2>{reportId ? "🔗 Share Single Report" : "🔗 Share All Reports"}</h2>
+
+      <div style={styles.formGroup}>
+        <label>Share with (User ID or Email):</label>
+        <input
+          type="text"
+          value={sharedWith}
+          onChange={(e) => setSharedWith(e.target.value)}
+          placeholder="Enter recipient ID/email"
+          style={styles.input}
+        />
       </div>
-      {isLoading ? (
-        <p>Loading...</p>
-      ) : error ? (
-        <p style={{ color: "red" }}>{error}</p>
-      ) : (
-        <div>{(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}</div>
-      )}
-      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>⬅️ Back to Dashboard</button>
+
+      <div style={styles.formGroup}>
+        <label>Relationship Type:</label>
+        <select
+          value={relationshipType}
+          onChange={(e) => setRelationshipType(e.target.value)}
+          style={styles.select}
+        >
+          <option value="Friend">Friend</option>
+          <option value="Family">Family</option>
+          <option value="Doctor">Doctor</option>
+          <option value="Caregiver">Caregiver</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <button onClick={handleShare} style={styles.button} disabled={loading}>
+        {loading ? "Sharing..." : reportId ? "Share Report" : "Share All Reports"}
+      </button>
+
+      {successMessage && <p style={styles.success}>{successMessage}</p>}
+      {error && <p style={styles.error}>{error}</p>}
+
+      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>⬅ Back to Dashboard</button>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: "700px",
-    margin: "auto",
+    maxWidth: "600px",
+    margin: "40px auto",
     padding: 20,
     fontFamily: "Arial, sans-serif",
   },
-  toggleGroup: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "10px",
+  formGroup: {
     marginBottom: 20,
   },
-  toggle: {
-    padding: "10px 20px",
+  input: {
+    width: "100%",
+    padding: 10,
+    fontSize: 16,
+    borderRadius: 5,
     border: "1px solid #ccc",
-    borderRadius: 5,
-    backgroundColor: "#f0f0f0",
-    cursor: "pointer",
   },
-  activeToggle: {
+  select: {
+    width: "100%",
+    padding: 10,
+    fontSize: 16,
+    borderRadius: 5,
+    border: "1px solid #ccc",
+  },
+  button: {
     padding: "10px 20px",
-    border: "1px solid #6200ee",
-    borderRadius: 5,
-    backgroundColor: "#6200ee",
-    color: "white",
-    cursor: "pointer",
-  },
-  card: {
-    backgroundColor: "#f9f9f9",
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    border: "1px solid #e0e0e0",
-  },
-  viewBtn: {
-    marginTop: 8,
-    marginRight: 10,
     backgroundColor: "#0D9488",
     color: "white",
     border: "none",
-    padding: "8px 12px",
-    borderRadius: 4,
-    cursor: "pointer",
-  },
-  revokeBtn: {
-    marginTop: 8,
-    backgroundColor: "#EF4444",
-    color: "white",
-    border: "none",
-    padding: "8px 12px",
-    borderRadius: 4,
+    borderRadius: 5,
     cursor: "pointer",
   },
   backButton: {
@@ -163,6 +157,18 @@ const styles = {
     border: "none",
     borderRadius: 6,
     cursor: "pointer",
+  },
+  success: {
+    marginTop: 15,
+    color: "green",
+  },
+  error: {
+    marginTop: 15,
+    color: "red",
+  },
+  message: {
+    textAlign: "center",
+    marginTop: 40,
   },
 };
 
