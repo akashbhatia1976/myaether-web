@@ -75,10 +75,29 @@ const shareAllReports = async (payload) => {
   return response.data;
 };
 
+//const getSharedReportsByUser = async (userId) => {
+//  const response = await axiosInstance.get(`/share/shared-by/${encodeURIComponent(userId)}`);
+//  return response.data;
+//};
+
 const getSharedReportsByUser = async (userId) => {
-  const response = await axiosInstance.get(`/share/shared-by/${encodeURIComponent(userId)}`);
+  if (!userId) throw new Error("User ID is required");
+  const token = getToken();
+  if (!token) throw new Error("Token is missing");
+
+  const response = await axiosInstance.get(
+    `/share/shared-by/${encodeURIComponent(userId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      withCredentials: true
+    }
+  );
+
   return response.data;
 };
+
 
 const getReportsSharedWithUser = async (userId) => {
   const response = await axiosInstance.get(`/share/shared-with/${encodeURIComponent(userId)}`);
