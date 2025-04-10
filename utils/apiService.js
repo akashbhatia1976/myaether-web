@@ -2,6 +2,13 @@
 import axios from 'axios';
 import axiosInstance from "./axiosInstance";
 
+// Base configuration
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+console.log("🌐 BASE_URL:", BASE_URL);
+
+const TIMEOUT = 60000;
+
+
 
 // Cookie-compatible token functions (keeping for compatibility)
 const getCookie = (name) => {
