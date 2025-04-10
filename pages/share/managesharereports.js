@@ -1,289 +1,168 @@
-// 📁 pages/reports/managesharereports.js
+// 📁 pages/reports/managesharereports.js (rewritten to mirror mobile ShareScreen)
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import {
-  shareAllReports,
-  shareReport,
+  getSharedReportsByUser,
+  getReportsSharedWithUser,
+  revokeSharedReport,
   getUserDetails,
 } from "../../utils/apiService";
 
-// Server-side authentication check
-export async function getServerSideProps(context) {
-  const { req } = context;
-  const cookies = req.cookies;
-
-  if (!cookies.token) {
-    return {
-      redirect: {
-        destination: "/auth/login",
-        permanent: false,
-      },
-    };
-  }
-
-  return {
-    props: {},
-  };
-}
-
 export default function ManageShareReports() {
   const router = useRouter();
-  const { reportId } = router.query;
-
-  const [userData, setUserData] = useState(null);
-  const [sharedWith, setSharedWith] = useState("");
-  const [relationshipType, setRelationshipType] = useState("Friend");
-  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [sharedReports, setSharedReports] = useState([]);
+  const [receivedReports, setReceivedReports] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState("shared");
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const init = async () => {
       try {
-        setLoading(true);
         const user = await getUserDetails();
-        setUserData(user);
+        setUserId(user.userId);
+        const [shared, received] = await Promise.all([
+          getSharedReportsByUser(user.userId),
+          getReportsSharedWithUser(user.userId),
+        ]);
+        setSharedReports(shared);
+        setReceivedReports(received);
       } catch (err) {
-        console.error("❌ Error loading user data:", err);
-        setError("Could not load user data. Please try logging in again.");
+        console.error("❌ Failed to load shared reports:", err);
+        setError("Failed to load shared reports.");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
-
-    fetchUserData();
+    init();
   }, []);
 
-  const handleShare = async () => {
-    if (!sharedWith) {
-      return alert("Please enter a user ID, email, or phone number.");
-    }
-
-    if (!userData) {
-      return alert("User data is not loaded yet. Please try again.");
-    }
-
-    const payload = {
-      ownerId: userData.userId,
-      sharedWith,
-      relationshipType,
-      permissionType: "view",
-    };
-
-    if (reportId) {
-      payload.reportId = reportId;
-    }
-
-    console.log("📦 Payload being sent:", payload);
-
+  const handleRevoke = async (report) => {
+    if (!confirm(`Revoke access to report ${report.reportId}?`)) return;
     try {
-      setLoading(true);
-      setError(null);
-
-      let data;
-      if (reportId) {
-     //   data = await shareReport(payload);
-          
-          const token = localStorage.getItem('token');
-
-          data = await axios.post(
-            'https://medical-server-7fmg.onrender.com/api/share/share-report',
-            payload,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              }
-            }
-          );
-
-      } else {
-        data = await shareAllReports(payload);
-      }
-
-      alert(`✅ Report${reportId ? "" : "s"} shared successfully!`);
-      setSharedWith("");
-      setRelationshipType("Friend");
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("❌ Share error:", error);
-      setError(error.message || "Failed to share reports. Please try again.");
-    } finally {
-      setLoading(false);
+      await revokeSharedReport({
+        ownerId: userId,
+        reportId: report.reportId,
+        sharedWithId: report.sharedWithId || undefined,
+        sharedWithEmail: report.sharedWithEmail || undefined,
+      });
+      setSharedReports((prev) => prev.filter((r) => r._id !== report._id));
+    } catch (err) {
+      alert("Failed to revoke access. Try again.");
     }
   };
 
-  if (loading && !userData) {
-    return (
-      <div style={styles.container}>
-        <p style={styles.loadingText}>Loading user data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={styles.container}>
-        <p style={styles.errorText}>{error}</p>
-        <button
-          onClick={() => router.push("/auth/login")}
-          style={styles.button}
-        >
-          Go to Login
-        </button>
-      </div>
-    );
-  }
+  const renderReportItem = (report) => (
+    <div key={report._id} style={styles.card}>
+      <p><strong>📄 Report:</strong> {report.reportId}</p>
+      <p>
+        {viewMode === "shared"
+          ? `👤 Shared With: ${report.sharedWithId || report.sharedWithEmail || "(invite sent)"}`
+          : `📥 Shared By: ${report.ownerId}`}
+      </p>
+      <p>📅 Shared On: {new Date(report.sharedAt).toLocaleDateString()}</p>
+      <button
+        onClick={() => router.push(`/reports/reportdetails?reportId=${report.reportId}&userId=${report.ownerId || userId}`)}
+        style={styles.viewBtn}
+      >
+        View Report
+      </button>
+      {viewMode === "shared" && (
+        <button onClick={() => handleRevoke(report)} style={styles.revokeBtn}>Revoke Access</button>
+      )}
+    </div>
+  );
 
   return (
     <div style={styles.container}>
-      <Head>
-        <title>Share Health Reports | Aether Health</title>
-      </Head>
-
-      <div style={styles.header}>
+      <Head><title>Manage Shared Reports | Aether</title></Head>
+      <h2>🔗 Shared Reports</h2>
+      <div style={styles.toggleGroup}>
         <button
-          onClick={() => router.push("/dashboard")}
-          style={styles.backButton}
-        >
-          ← Back to Dashboard
-        </button>
+          onClick={() => setViewMode("shared")}
+          style={viewMode === "shared" ? styles.activeToggle : styles.toggle}
+        >Shared by Me</button>
+        <button
+          onClick={() => setViewMode("received")}
+          style={viewMode === "received" ? styles.activeToggle : styles.toggle}
+        >Shared with Me</button>
       </div>
-
-      <h2 style={styles.title}>
-        {reportId ? "Share Report" : "Share All Reports"}
-      </h2>
-
-      {userData && (
-        <div style={styles.userInfo}>
-          <p>
-            Sharing as: <strong>{userData.userId}</strong>
-          </p>
-        </div>
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : error ? (
+        <p style={{ color: "red" }}>{error}</p>
+      ) : (
+        <div>{(viewMode === "shared" ? sharedReports : receivedReports).map(renderReportItem)}</div>
       )}
-
-      <label style={styles.label}>
-        Share with (user ID, email, or phone):
-      </label>
-      <input
-        type="text"
-        placeholder="Enter user ID, email, or phone"
-        value={sharedWith}
-        onChange={(e) => setSharedWith(e.target.value)}
-        style={styles.input}
-      />
-
-      <label style={styles.label}>Relationship Type:</label>
-      <select
-        value={relationshipType}
-        onChange={(e) => setRelationshipType(e.target.value)}
-        style={styles.select}
-      >
-        <option value="Friend">Friend</option>
-        <option value="Family">Family</option>
-        <option value="Doctor">Doctor</option>
-        <option value="Caregiver">Caregiver</option>
-        <option value="Other">Other</option>
-      </select>
-
-      <button
-        onClick={handleShare}
-        style={
-          loading
-            ? { ...styles.button, ...styles.buttonDisabled }
-            : styles.button
-        }
-        disabled={loading}
-      >
-        {loading
-          ? "Sharing..."
-          : reportId
-          ? "Share Report"
-          : "Share All Reports"}
-      </button>
+      <button style={styles.backButton} onClick={() => router.push("/dashboard")}>⬅️ Back to Dashboard</button>
     </div>
   );
 }
 
 const styles = {
   container: {
-    maxWidth: "500px",
-    margin: "40px auto",
-    padding: "20px",
-    backgroundColor: "#fff",
-    borderRadius: "10px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-    fontFamily: "'Segoe UI', sans-serif",
+    maxWidth: "700px",
+    margin: "auto",
+    padding: 20,
+    fontFamily: "Arial, sans-serif",
   },
-  header: {
-    marginBottom: "20px",
+  toggleGroup: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
+    marginBottom: 20,
+  },
+  toggle: {
+    padding: "10px 20px",
+    border: "1px solid #ccc",
+    borderRadius: 5,
+    backgroundColor: "#f0f0f0",
+    cursor: "pointer",
+  },
+  activeToggle: {
+    padding: "10px 20px",
+    border: "1px solid #6200ee",
+    borderRadius: 5,
+    backgroundColor: "#6200ee",
+    color: "white",
+    cursor: "pointer",
+  },
+  card: {
+    backgroundColor: "#f9f9f9",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    border: "1px solid #e0e0e0",
+  },
+  viewBtn: {
+    marginTop: 8,
+    marginRight: 10,
+    backgroundColor: "#0D9488",
+    color: "white",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  revokeBtn: {
+    marginTop: 8,
+    backgroundColor: "#EF4444",
+    color: "white",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: 4,
+    cursor: "pointer",
   },
   backButton: {
-    background: "none",
+    marginTop: 30,
+    backgroundColor: "#ccc",
+    padding: "10px 15px",
     border: "none",
-    color: "#4361ee",
-    fontSize: "16px",
+    borderRadius: 6,
     cursor: "pointer",
-    padding: "0",
-  },
-  title: {
-    fontSize: "24px",
-    marginBottom: "20px",
-    color: "#333",
-    fontWeight: "600",
-  },
-  userInfo: {
-    padding: "10px",
-    backgroundColor: "#f5f8ff",
-    borderRadius: "6px",
-    marginBottom: "20px",
-  },
-  label: {
-    display: "block",
-    marginTop: "15px",
-    marginBottom: "5px",
-    color: "#555",
-    fontWeight: "500",
-  },
-  input: {
-    width: "100%",
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-  },
-  select: {
-    width: "100%",
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-  },
-  button: {
-    marginTop: "25px",
-    width: "100%",
-    padding: "12px",
-    borderRadius: "6px",
-    backgroundColor: "#4361ee",
-    color: "white",
-    fontSize: "16px",
-    fontWeight: "600",
-    border: "none",
-    cursor: "pointer",
-  },
-  buttonDisabled: {
-    backgroundColor: "#a0aae8",
-    cursor: "not-allowed",
-  },
-  loadingText: {
-    textAlign: "center",
-    fontSize: "16px",
-    color: "#666",
-  },
-  errorText: {
-    color: "#e53935",
-    textAlign: "center",
-    marginBottom: "20px",
   },
 };
 
