@@ -91,7 +91,10 @@ const getSharedReportsByUser = async (userId) => {
     `/share/shared-by/${encodeURIComponent(userId)}`,
     {
       headers: {
-        Authorization: `Bearer ${token}`
+  //      Authorization: `Bearer ${token}` //uncomment this, if the below change doesnt work
+          
+          'x-auth-token': `Bearer ${token}`
+          
       },
       withCredentials: true
     }
@@ -113,7 +116,9 @@ const getReportsSharedWithUser = async (userId) => {
     `/share/shared-with/${encodeURIComponent(userId)}`,
     {
       headers: {
-        Authorization: `Bearer ${token}`
+    //    Authorization: `Bearer ${token}` // uncomment this, if the below change doesnt work
+          
+          'x-auth-token': `Bearer ${token}`
       },
       withCredentials: true
     }
