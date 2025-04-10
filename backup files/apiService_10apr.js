@@ -1,7 +1,18 @@
 // 📁 myaether-web/utils/apiService.js
 import axios from 'axios';
-import axiosInstance from "./axiosInstance";
 
+// Base configuration
+const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+console.log("🌐 BASE_URL:", BASE_URL);
+
+const TIMEOUT = 60000;
+
+// Create axios instance with default configuration
+const axiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: TIMEOUT,
+  withCredentials: true, // ✅ Ensures cookies are sent in cross-origin requests
+});
 
 // Cookie-compatible token functions (keeping for compatibility)
 const getCookie = (name) => {
