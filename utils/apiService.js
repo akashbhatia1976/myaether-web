@@ -51,6 +51,8 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = getToken();
     
+      console.log("🔐 Token from getToken():", token);
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
